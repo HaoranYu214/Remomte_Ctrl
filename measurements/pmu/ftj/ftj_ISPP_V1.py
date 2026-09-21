@@ -298,6 +298,7 @@ def run_test(
             {"name": saved_params.keys(), "value": map(repr, saved_params.values())}
         )
         with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+            writer.book.properties.creator = "ssme / Haoran Yu"
             if df_ch1 is not None and not df_ch1.empty:
                 df_ch1.to_excel(writer, sheet_name="Channel_1", index=False)
             if df_ch2 is not None and not df_ch2.empty:

@@ -528,6 +528,7 @@ def run_test(
         )
 
         with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+            writer.book.properties.creator = "ssme / Haoran Yu"
             pwm_df.to_excel(writer, sheet_name="PWM_ReadOnly", index=False)
             df_ch1.to_excel(writer, sheet_name="Channel_1_ReadOnly", index=False)
             df_ch2.to_excel(writer, sheet_name="Channel_2_ReadOnly", index=False)

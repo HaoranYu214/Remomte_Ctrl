@@ -150,7 +150,9 @@ def run_sweep():
 
     if summary_data:
         df_summary = pd.DataFrame(summary_data).assign(time=run_time)
-        df_summary.to_excel(f"{summary_stem}.xlsx", index=False)
+        with pd.ExcelWriter(f"{summary_stem}.xlsx", engine="openpyxl") as writer:
+            writer.book.properties.creator = "ssme / Haoran Yu"
+            df_summary.to_excel(writer, index=False)
 
     status = "interrupted" if interrupted else "complete"
     success_count = sum(1 for result in results if result.get("success", False))

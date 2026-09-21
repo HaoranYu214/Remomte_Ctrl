@@ -60,3 +60,7 @@ def preview_fet_family(configs, *, show=True):
             channel_values[f"CH{channel} ({terminal}, curve {index})"] = values
     return preview_channel_voltages(channel_values, show=show,
                                    title="FET commanded channel voltages")
+
+#       /\      /\
+#   ___/  \____/  \___  ssme
+#          haoran yu

@@ -353,6 +353,7 @@ def make_pund_seq_configs(*, channels=None, parameters=None):
 def save_readback(path, frames, parameters, seq_configs, *, channels, metadata):
     """Checkpoint raw channels, exact waveforms, and all run settings first."""
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
+        writer.book.properties.creator = "ssme / Haoran Yu"
         for ch, frame in zip(channels, frames):
             if frame is not None:
                 frame.to_excel(writer, sheet_name=f"Channel_{ch}", index=False)
@@ -384,6 +385,7 @@ def save_analysis(path, data, readback_name):
         sheets["AnalysisMeta"] = pd.DataFrame(
             [{"name": k, "value": repr(v)} for k, v in data["meta"].items()])
     with pd.ExcelWriter(path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+        writer.book.properties.creator = "ssme / Haoran Yu"
         for name, frame in sheets.items():
             frame.to_excel(writer, sheet_name=name, index=False)
     fig, ax = plt.subplots(figsize=(6, 5))

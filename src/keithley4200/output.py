@@ -153,6 +153,7 @@ def save_atomic_workbook(sheets, path):
         # Only finalize the workbook after all sheets were written successfully.
         with open(temporary, "wb") as handle:
             writer = pd.ExcelWriter(handle, engine="openpyxl")
+            writer.book.properties.creator = "ssme / Haoran Yu"
             for name, frame in sheets.items():
                 frame.to_excel(writer, sheet_name=name, index=False)
             writer.close()
@@ -168,3 +169,8 @@ def save_summary_workbook(rows, path, *, sheet_name="Summary"):
 
     frame = rows if isinstance(rows, pd.DataFrame) else pd.DataFrame(rows)
     return save_atomic_workbook({sheet_name: frame}, path)
+
+#   +-------------------+
+#   | ssme / haoran yu  |
+#   |      [saved]      |
+#   +-------------------+
