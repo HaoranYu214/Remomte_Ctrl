@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：分段 I–V；先改 TURNING_POINTS、SEGMENT_STEP、PARAMS、通道、INST 和 SAVE_DIR。
+# 流程：main → run_test 合并参数/生成电压列表 → SMU 扫描/读回 → 保存 Excel 和 J–V 图。
+# run_test 的 params_override 覆盖同名 PARAMS；通道、接线和转折点用独立关键字参数传入。
+# 直接运行会实测；离线看电压列表请调用 preview_waveform，本文件没有 PREVIEW_ONLY 开关。
+
 """Segmented SMU voltage sweep: 0 -> V1 -> 0 -> V2 -> 0."""
 
 from pathlib import Path
@@ -80,6 +86,7 @@ NAMES = {
 }
 
 
+# 离线绘制转折点和步长生成的电压列表；show 控制显示，可指定图片保存路径。
 def preview_waveform(output_path=None, *, show=True, title=None, turning_points=None, segment_step=None):
     """Show the exact segmented voltage list, or save it when requested."""
     import matplotlib.pyplot as plt
@@ -112,6 +119,8 @@ def preview_waveform(output_path=None, *, show=True, title=None, turning_points=
     return output_path
 
 
+# 合并 PARAMS 与 params_override，按转折点生成电压列表，连接 SMU 扫描并保存 Excel/图。
+# 返回输出路径和点数；本函数直接实测，离线检查电压路径请调用 preview_waveform。
 def run_test(params_override=None, *, turning_points=None, segment_step=None,
              save_dir=None, file_stem="IV", inst=None, device_area_cm2=None,
              sweep_channel=None, bias_channel=None, available_channels=None,
@@ -220,6 +229,7 @@ def run_test(params_override=None, *, turning_points=None, segment_step=None,
     }
 
 
+# 使用本文件默认配置调用 run_test，返回本次分段 I–V 的输出信息。
 def main():
     """Keep the standalone and existing workflow entry point."""
     return run_test()

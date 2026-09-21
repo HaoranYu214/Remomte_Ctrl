@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：retentionPUND；先改 INST、CH1/CH2、params、SEGARB_OPTIONS 和 SAVE_DIR。
+# 流程：run_test → make_retention_plan → 分阶段施加波形/关闭输出等待 → 保存原始数据和计时 → 分析。
+# PREVIEW_ONLY=True 时只预览；本测试使用固定量程，不自动换档重测。
+# params_override 覆盖同名默认参数；阶段等待由 _retention.py 执行，波形仍在本文件定义。
+
 """Output-off retention PUND with explicit split executions and host timing."""
 
 from pathlib import Path
@@ -56,6 +62,7 @@ PULSE_SEGMENTS = {
 }
 
 
+# 按各采集窗口的时长分配返回数据的切片，用于识别不同脉冲分支。
 def _allocate_segment_slices(total_points, measured_segments, measured_durations):
     """Allocate returned samples to measured segments by measurement duration."""
     total_duration = sum(measured_durations)
@@ -76,6 +83,7 @@ def _allocate_segment_slices(total_points, measured_segments, measured_durations
         cursor += point_count
     return segment_slices, counts
 
+# 分别积分相减后的对应电流分支，避免跨等待间隔积分；按面积换算极化。
 def _integrate_branches(branches, area_cm2):
     """Integrate matched differential-current branches without crossing delays."""
     if area_cm2 <= 0:
@@ -130,6 +138,7 @@ def _integrate_branches(branches, area_cm2):
         raise ValueError("PUND triangular branch integration received no samples.")
     return pd.concat(frames, ignore_index=True)
 
+# 连接正、负 PUND 半回线，并把完整极化回线居中。
 def _connect_and_center_pairs(frames, area_cm2):
     """Connect positive/negative PUND halves and center the complete loop."""
     connected = []
@@ -159,6 +168,7 @@ def _connect_and_center_pairs(frames, area_cm2):
     return loop
 
 
+# 为本次数据和图片预留同一个文件主名；会在输出目录登记编号，避免覆盖。
 def build_fname_base(*, parameters=None, save_dir=None):
     """Reserve one short output stem shared by the workbook and its plots."""
     parameters = params if parameters is None else parameters
@@ -171,6 +181,7 @@ def build_fname_base(*, parameters=None, save_dir=None):
     return reserve_output_stem(save_dir, name)
 
 
+# 生成双通道 PUND 段波形及采集窗口，供预览或下发仪器；本函数不发送命令。
 def make_pund_seq_configs(*, channels=None, parameters=None):
     """Build five triangular PUND pulses separated by unmeasured delays."""
     parameters = params if parameters is None else parameters
@@ -251,6 +262,7 @@ def make_pund_seq_configs(*, channels=None, parameters=None):
     return {ch1: [ch1_config], ch2: [ch2_config]}
 
 
+# 生成 Preset/P/U/N/D 分别执行的计划，各脉冲之间使用相同的主机等待时间。
 def make_retention_plan(*, channels=None, parameters=None):
     """Execute Preset/P/U/N/D separately, with the same inter-pulse host delay."""
     parameters = params if parameters is None else parameters
@@ -266,6 +278,7 @@ def make_retention_plan(*, channels=None, parameters=None):
     ]
 
 
+# 离线显示执行边界、采集窗口和输出关闭的等待段；可压缩长等待以便阅读。
 def preview_waveform(
     output_path=None,
     *,
@@ -295,6 +308,7 @@ def preview_waveform(
     return fig
 
 
+# 把本次实验参数和仪器选项整理为参数表，供结果文件记录；不执行测量。
 def build_params_table(*, channels=None, inst=None, parameters=None, segarb_options=None):
     """Return the PUND run parameters as a two-column table."""
     parameters = params if parameters is None else parameters
@@ -320,6 +334,7 @@ def build_params_table(*, channels=None, inst=None, parameters=None, segarb_opti
     return pd.DataFrame(rows)
 
 
+# 将 P/U、N/D 对应分支的电流相减并积分，返回分析表；不连接仪器。
 def analyze_pund_triangle_diff(df_ch1, df_ch2, *, channels=None, parameters=None):
     """Subtract and integrate corresponding branches of triangular PUND pulses."""
     parameters = params if parameters is None else parameters
@@ -395,6 +410,7 @@ def analyze_pund_triangle_diff(df_ch1, df_ch2, *, channels=None, parameters=None
             if point_count < 2:
                 raise ValueError("Too few samples in a retention PUND branch.")
             grid = np.linspace(0.0, 1.0, point_count)
+            # 把选定分支的数据插值到共同的归一化网格，便于逐点作差。
             def resample(branch, key):
                 values = branch[key]
                 return np.interp(grid, np.linspace(0.0, 1.0, len(values)), values)
@@ -429,6 +445,9 @@ def analyze_pund_triangle_diff(df_ch1, df_ch2, *, channels=None, parameters=None
     }
 
 
+# 合并 params_override 后以固定量程执行保持测试，在阶段间关闭输出并等待。
+# preview_only=True 时只预览；实测先保存原始数据/计时，再分析，返回结果字典。
+# 不自动换档重测，以免额外脉冲改变保持历史。
 def run_test(
     params_override=None,
     *,

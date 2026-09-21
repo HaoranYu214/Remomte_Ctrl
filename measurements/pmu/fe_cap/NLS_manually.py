@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：直接定义波形的 NLS；先改 params、INST、CH1/CH2、SEGARB_OPTIONS 和 SAVE_DIR。
+# 流程：make_nls_seq_configs 定义波形 → main 采集 → save_nls_results 分析并保存。
+# 文件末尾按 PREVIEW_ONLY 选择预览或实测；直接调用 main 会实测。
+
 """NLS switch segARB test with direct sequence definitions."""
 
 from pathlib import Path
@@ -51,6 +56,7 @@ SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\19-08-2026\Johanna\NLS")
 PREVIEW_ONLY = True
 
 
+# 生成 NLS 写入/读回的双通道波形与采集窗口；本函数不连接仪器。
 def make_nls_seq_configs():
     """Build NLS switch seq_configs directly in this script."""
     offset = params["offset"]
@@ -125,11 +131,13 @@ def make_nls_seq_configs():
     return {CH1: [ch1_config], CH2: [ch2_config]}
 
 
+# 根据本次参数生成波形图；不连接仪器，指定 output_path 时保存预览图片。
 def preview_waveform(output_path=None):
     """Preview the NLS waveform without connecting to the PMU."""
     return preview_sequence_configs(make_nls_seq_configs()[CH1], output_path, title_prefix="NLS CH1")
 
 
+# 把本次实验参数和仪器选项整理为参数表，供结果文件记录；不执行测量。
 def build_params_table():
     """Return NLS and common PMU options as a two-column table."""
     rows = [{"name": name, "value": repr(value)} for name, value in params.items()]
@@ -142,6 +150,7 @@ def build_params_table():
     return pd.DataFrame(rows)
 
 
+# 处理一个通道的 NLS 数据：对应电流作差，再积分为极化结果表。
 def process_nls_channel(df, channel):
     """Calculate differential polarization for one NLS channel."""
     voltage = df[f"Voltage {channel}"].values
@@ -170,6 +179,7 @@ def process_nls_channel(df, channel):
     )
 
 
+# 保存 NLS 原始数据；按 MeasureSquare 选择波形结果，或计算并保存差分极化结果。
 def save_nls_results(df_ch1, df_ch2):
     """Save raw NLS data and processed plots."""
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
@@ -230,6 +240,8 @@ def save_nls_results(df_ch1, df_ch2):
     plt.close(fig)
 
 
+# 连接 PMU 执行本文件 NLS 波形，读取并保存原始数据和差分极化结果。
+# 本函数直接实测；PREVIEW_ONLY 分流在文件末尾。
 def main():
     """Run the NLS switch measurement."""
     seq_configs = make_nls_seq_configs()

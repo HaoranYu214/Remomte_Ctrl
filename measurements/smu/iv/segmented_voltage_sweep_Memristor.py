@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：多回线忆阻器 I–V；先改 POSITIVE_PEAK_*、NEGATIVE_PEAK、SEGMENT_STEP 和 PARAMS。
+# TURNING_POINTS 由峰值列表生成；仪器、接线及输出位置在 INST、SMU_CONNECTIONS 和 SAVE_DIR。
+# 流程：main → 生成完整电压列表 → SMU 扫描/读回 → 保存指令值、实测值和 J–V 图；直接运行会实测。
+
 """Segmented SMU voltage sweep: 0 -> V1 -> 0 -> V2 -> 0."""
 
 from pathlib import Path
@@ -109,6 +114,7 @@ NAMES = {
 SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\10-09-2026\04A1_2700_1200_300\R10_1\IV")
 
 
+# 按预先生成的多回线 TURNING_POINTS 执行 SMU 列表扫描，保存数据、参数和 J–V 图。
 def main():
     """Run the segmented list sweep and save measured plus commanded values."""
     sweep_values = build_segmented_voltage_path(TURNING_POINTS, SEGMENT_STEP)

@@ -1,3 +1,8 @@
+
+# 阅读说明：retentionPV/retentionPUND 的共用执行辅助文件，不是独立实验入口。
+# 实验参数和波形在两个入口中修改；这里负责检查、配置、等待、执行和原始数据保存。
+# prepare_stage/execute_plan 使用调用者的仪器连接；preview_plan 只做离线绘图。
+
 """Local execution support for the two retention entries; no waveform design."""
 
 import math
@@ -13,6 +18,7 @@ from keithley4200.pmu.pmu_tests import (
 )
 
 
+# 在连接仪器或预留输出文件前检查所有阶段的波形、通道和参数。
 def validate_plan(plan, channels, params):
     """Check every stage before opening a session or reserving output files."""
     if len(set(channels)) != 2:
@@ -50,6 +56,7 @@ def validate_plan(plan, channels, params):
                 raise ValueError("Each output-off execution must start and end at 0 V.")
 
 
+# 通过已有连接在输出关闭时配置下一阶段，供后续等待到期后执行。
 def prepare_stage(query, configs, channels, params, options):
     """Configure with outputs off, before waiting for the next deadline."""
     query(":PMU:INIT 1")
@@ -63,6 +70,8 @@ def prepare_stage(query, configs, channels, params, options):
         query(f":PMU:OUTPUT:STATE {channel}, 1")
 
 
+# 按计划配置并执行各阶段，在阶段间关闭输出并由主机计时等待。
+# 更新 frames/timing；记录的时序是主机估计值，不是仪器实测脉冲时间。
 def execute_plan(query, plan, channels, params, options, frames, timing,
                  *, clock=time.perf_counter, sleep=time.sleep, poll_s=0.005,
                  timeout_s=30.0):
@@ -143,6 +152,7 @@ def execute_plan(query, plan, channels, params, options, frames, timing,
     return tuple(pd.concat(frames[ch], ignore_index=True) for ch in channels)
 
 
+# 将已获取的原始数据、阶段计时和参数保存到工作簿，支持失败或中断后的记录。
 def save_raw(path, frames, timing, parameters):
     """Checkpoint raw data before analysis, including interrupted/failed runs."""
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
@@ -153,6 +163,7 @@ def save_raw(path, frames, timing, parameters):
         parameters.to_excel(writer, sheet_name="Parameters", index=False)
 
 
+# 离线画出双通道执行阶段与等待间隔；输出关闭期间不假定器件电压。
 def preview_plan(plan, channel, *, show=True, compress_delay=True, title_prefix="Retention"):
     """Preview both channels; output-off gaps have no assigned DUT voltage."""
     import matplotlib.pyplot as plt

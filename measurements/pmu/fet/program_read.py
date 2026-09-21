@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：单极性 FeFET 写读；先改 params、INST、GATE_CH/DRAIN_CH 和 SAVE_DIR。
+# 流程：run_test → 校验参数/生成写读计划 → PMU 执行 → 读回并整理 Id → 保存数据和图。
+# PREVIEW_ONLY=True 时只预览；params_override 覆盖同名默认参数，其余沿用本文件设置。
+# 读前等待超过 1 s 时分开执行写入和读回；源极设置在 USE_SOURCE_SMU/SOURCE_SMU。
+
 """Preferred FeFET program/read test using one synchronized Segment Arb run."""
 
 from pathlib import Path
@@ -90,6 +96,7 @@ params = {
 SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\06-08-2026\03C5_FET\FeFET 2\D40-5um gap circular\single")
 
 
+# 向波形数组追加不采集数据的等待段；超过 1 s 时拆成多个段。
 def append_constant_delay(arrays, level, duration):
     """Append an unmeasured delay, split at the 1 s segment-time limit."""
     remaining = float(duration)
@@ -103,6 +110,7 @@ def append_constant_delay(arrays, level, duration):
         arrays["meas_stop"].append(0.0)
         remaining -= segment_time
 
+# 把序列循环展开为预览配置，便于画完整时序；不改变实际硬件执行计划。
 def build_sequence_plan_preview_config(configs, sequence_plan, sequence_id):
     """Expand hardware loops into one config solely for waveform preview."""
     config_by_id = {config[0]: config for config in configs}
@@ -119,6 +127,7 @@ def build_sequence_plan_preview_config(configs, sequence_plan, sequence_id):
     return (sequence_id, *arrays)
 
 
+# 向数组追加脉冲的上升、平台、下降和休息段，并设置采集窗口。
 def append_pulse(arrays, base, level, timing, measure=False, *, parameters=None):
     """Append seamless rise, plateau, fall, and rest segments."""
     parameters = params if parameters is None else parameters
@@ -137,6 +146,7 @@ def append_pulse(arrays, base, level, timing, measure=False, *, parameters=None)
     arrays["meas_stop"].extend([0.0, m_stop, 0.0, 0.0])
 
 
+# 生成单极性写脉冲串及读回计划，返回读点表、双通道配置和硬件循环列表。
 def build_program_read_sequence(include_delay=True, *, channels=None, parameters=None):
     """Build one-pulse sequences and use the hardware sequence-list loops."""
     parameters = params if parameters is None else parameters
@@ -228,6 +238,7 @@ def build_program_read_sequence(include_delay=True, *, channels=None, parameters
     return pd.DataFrame(plan), configs, seq_lists
 
 
+# 检查脉冲次数、时间、采集窗口及悬空读栅极的 SSR 设置；不连接仪器。
 def validate_parameters(*, parameters=None):
     parameters = params if parameters is None else parameters
 
@@ -248,6 +259,7 @@ def validate_parameters(*, parameters=None):
         raise ValueError("Measurement fractions must satisfy 0 <= start < stop <= 1.")
 
 
+# 返回展开循环后的 Gate/Drain 波形配置，供预览和数值导出使用。
 def expanded_preview_configs(*, channels=None, parameters=None):
     """Return fully expanded Gate and Drain configs for plotting/export."""
     parameters = params if parameters is None else parameters
@@ -264,6 +276,7 @@ def expanded_preview_configs(*, channels=None, parameters=None):
     return [gate_preview, drain_preview]
 
 
+# 根据本次参数生成波形图；不连接仪器，指定 output_path 时保存预览图片。
 def preview_waveform(output_path=None, *, compress_delay=True, channels=None, parameters=None):
     """Preview the expanded plan using compressed or real-time delay scaling."""
     parameters = params if parameters is None else parameters
@@ -279,6 +292,7 @@ def preview_waveform(output_path=None, *, compress_delay=True, channels=None, pa
     )
 
 
+# 返回真实时间轴和压缩等待时间轴的波形表，供 Excel 保存和绘图使用。
 def waveform_data_frames(*, channels=None, parameters=None):
     """Return real-time and compressed numeric waveform plotting tables."""
     parameters = params if parameters is None else parameters
@@ -297,6 +311,9 @@ def waveform_data_frames(*, channels=None, parameters=None):
     )
 
 
+# 合并 params_override 后执行写入—等待—读回，保存工作簿及结果图。
+# preview_only=True 时只预览；实测返回含 output_path、params 和 settings 的字典。
+# 超过 1 s 的读前等待采用分开执行和主机等待；未覆盖的参数沿用本文件默认值。
 def run_test(
     params_override=None,
     *,

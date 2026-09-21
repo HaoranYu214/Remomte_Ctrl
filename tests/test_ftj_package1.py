@@ -18,7 +18,7 @@ for path in (SRC_ROOT, REPO_ROOT):
 from keithley4200.smu.system_mode import build_segmented_voltage_path, run_list_voltage_sweep
 
 
-PACKAGE_PATH = REPO_ROOT / "workflows" / "package1.py"
+PACKAGE_PATH = REPO_ROOT / "measurements" / "workflows" / "package1.py"
 
 
 def load_package():

@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：FeFET 读偏置/延迟扫描；先改 VG_READ_VALUES、VD_READ_VALUES、DELAY_TIMES。
+# FEFET_REPEAT_N/T 控制附加重复测试；写脉冲、仪器和保存根目录继承 bipolar_program_read.py。
+# 流程：main → 各偏置/延迟写读 → 附加重复写读 → 配对指标/排名 → 保存汇总和图。
+# 这是实测扫描入口；启动前要求 bipolar_program_read.PREVIEW_ONLY=False。
+
 """Sweep Vg_read, Vd_read, and write-to-read delay using the dual FeFET test."""
 
 from pathlib import Path
@@ -34,6 +40,7 @@ FEFET_REPEAT_T = 1e-3
 SWEEP_NAME = "dual_3d_Vg_Vd_delay_sweep"
 
 
+# 检查偏置/延迟列表及重复次数，并确认双极性实验入口已设为实测模式。
 def validate_sweep():
     if not VG_READ_VALUES or not VD_READ_VALUES or not DELAY_TIMES:
         raise ValueError("VG_READ_VALUES, VD_READ_VALUES, and DELAY_TIMES cannot be empty.")
@@ -47,6 +54,7 @@ def validate_sweep():
         raise ValueError("Set PREVIEW_ONLY = False in bipolar_program_read.py.")
 
 
+# 配对正、负写入后的读电流，计算两状态的电流窗口及归一化对比度。
 def calculate_metrics(raw_data):
     """Pair positive/negative reads and calculate state-separation metrics."""
     index_columns = ["Vg_read_V", "Vd_read_V", "RequestedDelay_s"]
@@ -75,6 +83,7 @@ def calculate_metrics(raw_data):
     return current_table.sort_values(index_columns).reset_index(drop=True)
 
 
+# 按各偏置组合在全部延迟下的最小电流窗口排序，比较读条件的稳定区分能力。
 def rank_read_biases(metrics):
     """Rank Vg/Vd pairs by the smallest absolute window across all delays."""
     ranking = metrics.groupby(["Vg_read_V", "Vd_read_V"], as_index=False).agg(
@@ -92,6 +101,7 @@ def rank_read_biases(metrics):
     ).reset_index(drop=True)
 
 
+# 按读偏置分组绘制对比度随延迟的变化，并保存图片。
 def save_retention_plot(metrics, output_path):
     fig, axis = plt.subplots(figsize=(10, 6))
     for (vg, vd), group in metrics.groupby(["Vg_read_V", "Vd_read_V"]):
@@ -113,6 +123,7 @@ def save_retention_plot(metrics, output_path):
     plt.close(fig)
 
 
+# 以延迟、栅极读偏置和漏极读偏置为坐标，用颜色表示对比度并保存散点图。
 def save_3d_plot(metrics, output_path):
     fig = plt.figure(figsize=(10, 7))
     axis = fig.add_subplot(111, projection="3d")
@@ -135,6 +146,7 @@ def save_3d_plot(metrics, output_path):
     plt.close(fig)
 
 
+# 绘制并保存一组读偏置下重复正/负写读的电流变化图。
 def save_repeated_fefet_plot(frame, output_path, vg, vd):
     """Plot the extra N repeated Positive/Negative reads for one bias pair."""
     fig, axis = plt.subplots(figsize=(8, 5))
@@ -160,6 +172,7 @@ def save_repeated_fefet_plot(frame, output_path, vg, vd):
     plt.close(fig)
 
 
+# 将栅极/漏极偏置表画成带数值的热图，并保存到指定路径。
 def _annotated_heatmap(table, title, colorbar_label, output_path, value_scale=1.0):
     """Save a compact Vg-row/Vd-column heatmap with numeric cell labels."""
     fig, axis = plt.subplots(figsize=(10, 6))
@@ -190,6 +203,7 @@ def _annotated_heatmap(table, title, colorbar_label, output_path, value_scale=1.
     plt.close(fig)
 
 
+# 保存偏置热图、排名及重复测试汇总图，便于从扫描结果选择读条件。
 def save_clear_summary_plots(metrics, ranking, repeated_data, output_stem):
     """Save human-readable heatmaps and rankings in addition to the 3D plot."""
     longest_delay = metrics["RequestedDelay_s"].max()
@@ -267,6 +281,8 @@ def save_clear_summary_plots(metrics, ranking, repeated_data, output_stem):
         )
 
 
+# 遍历 Vg/Vd/延迟组合，并补做重复写读；汇总电流窗口、偏置排名和结果图。
+# 调用双极性实验执行实测，返回汇总工作簿及主要图片路径；未覆盖设置继承子入口。
 def main():
     validate_sweep()
     output_dir = prepare_output_dir(Path(dual.SAVE_DIR) / SWEEP_NAME)

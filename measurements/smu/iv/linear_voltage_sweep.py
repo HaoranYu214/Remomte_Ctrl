@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：线性 I–V；先改 PARAMS 的起止电压/步长、通道、SMU_CONNECTIONS、INST 和 SAVE_DIR。
+# 流程：main → SMU 线性扫描 → 读取数据 → 拼接指令电压 → 保存 Excel 和 J–V 图。
+# 直接运行会实测；DEVICE_AREA_CM2 用于将电流换算为电流密度。
+
 """Two-channel SMU linear voltage sweep using the reusable System Mode layer."""
 
 from pathlib import Path
@@ -84,6 +89,7 @@ NAMES = {
 SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\06-07-2026\03C6\R20um1\FE\frequency")
 
 
+# 按 PARAMS 的起点、终点和步长连接 SMU 线性扫描，保存指令值、实测值、参数及 J–V 图。
 def main():
     """Run the sweep and save data plus the complete parameter table."""
     with SMUSession(INST) as session:

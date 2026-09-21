@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：PUND_tri；先改 INST、CH1/CH2、params、SEGARB_OPTIONS 和 SAVE_DIR。
+# 流程：run_test 合并参数 → 生成波形 → 采集/量程检查 → 分析极化 → 保存工作簿和图片。
+# PREVIEW_ONLY=True 时只预览；调用 run_test 时 params_override 覆盖同名默认参数。
+# 波形在 make_pund_seq_configs 中定义；分析函数处理已读出的数据，不连接仪器。
+# 实测接受的 Irange1/Irange2 会回写默认量程；电压、时序等其他覆盖值不回写。
+
 """Triangular-pulse PUND segARB test with branch-aware integration."""
 
 from pathlib import Path
@@ -60,6 +67,7 @@ PULSE_SEGMENTS = {
 }
 
 
+# 按各采集窗口的时长分配返回数据的切片，用于识别不同脉冲分支。
 def _allocate_segment_slices(total_points, measured_segments, measured_durations):
     """Allocate returned samples to measured segments by measurement duration."""
     total_duration = sum(measured_durations)
@@ -80,6 +88,7 @@ def _allocate_segment_slices(total_points, measured_segments, measured_durations
         cursor += point_count
     return segment_slices, counts
 
+# 分别积分相减后的对应电流分支，避免跨等待间隔积分；按面积换算极化。
 def _integrate_branches(branches, area_cm2):
     """Integrate matched differential-current branches without crossing delays."""
     if area_cm2 <= 0:
@@ -134,6 +143,7 @@ def _integrate_branches(branches, area_cm2):
         raise ValueError("PUND triangular branch integration received no samples.")
     return pd.concat(frames, ignore_index=True)
 
+# 连接正、负 PUND 半回线，并把完整极化回线居中。
 def _connect_and_center_pairs(frames, area_cm2):
     """Connect positive/negative PUND halves and center the complete loop."""
     connected = []
@@ -163,6 +173,7 @@ def _connect_and_center_pairs(frames, area_cm2):
     return loop
 
 
+# 为本次数据和图片预留同一个文件主名；会在输出目录登记编号，避免覆盖。
 def build_fname_base(*, parameters=None, save_dir=None):
     """Reserve one short output stem shared by the workbook and its plots."""
     parameters = params if parameters is None else parameters
@@ -175,6 +186,7 @@ def build_fname_base(*, parameters=None, save_dir=None):
     return reserve_output_stem(save_dir, name)
 
 
+# 生成双通道 PUND 段波形及采集窗口，供预览或下发仪器；本函数不发送命令。
 def make_pund_seq_configs(*, channels=None, parameters=None):
     """Build five triangular PUND pulses separated by unmeasured delays."""
     parameters = params if parameters is None else parameters
@@ -255,6 +267,7 @@ def make_pund_seq_configs(*, channels=None, parameters=None):
     return {ch1: [ch1_config], ch2: [ch2_config]}
 
 
+# 根据本次参数生成波形图；不连接仪器，指定 output_path 时保存预览图片。
 def preview_waveform(output_path=None, *, show=True, title_prefix=None, channels=None, parameters=None):
     """Preview the triangular PUND waveform without connecting to the PMU."""
     parameters = params if parameters is None else parameters
@@ -271,6 +284,7 @@ def preview_waveform(output_path=None, *, show=True, title_prefix=None, channels
     )
 
 
+# 把本次实验参数和仪器选项整理为参数表，供结果文件记录；不执行测量。
 def build_params_table(*, channels=None, inst=None, parameters=None, segarb_options=None):
     """Return the PUND run parameters as a two-column table."""
     parameters = params if parameters is None else parameters
@@ -292,6 +306,7 @@ def build_params_table(*, channels=None, inst=None, parameters=None, segarb_opti
     return pd.DataFrame(rows)
 
 
+# 将原始双通道数据、PUND 分析结果和参数写入同一个 Excel 文件。
 def save_pund_workbook(
     output_path,
     df_ch1,
@@ -319,6 +334,8 @@ def save_pund_workbook(
     return Path(output_path)
 
 
+# 通过已有 query 连接采集双通道数据，按结果调整固定电流量程后重测，返回双通道数据。
+# 更新本次 parameters，并把接受的 Irange1/Irange2 记回本文件默认参数；重测会再次施加波形。
 def acquire_with_auto_range(query, *, channels=None, parameters=None, segarb_options=None):
     """Acquire triangular PUND data using the shared automatic range helper."""
     parameters = params if parameters is None else parameters
@@ -326,6 +343,7 @@ def acquire_with_auto_range(query, *, channels=None, parameters=None, segarb_opt
     ch1, ch2 = channels
     segarb_options = remap_channel_options(SEGARB_OPTIONS, (CH1, CH2), channels, segarb_options)
 
+    # 按给定固定量程执行一次波形，读取双通道数据并关闭输出；空数据会报错。
     def acquire_once(ranges):
         current_ranges = {ch1: ranges["Irange1"], ch2: ranges["Irange2"]}
         execute_segARB_test(
@@ -361,6 +379,7 @@ def acquire_with_auto_range(query, *, channels=None, parameters=None, segarb_opt
     return result
 
 
+# 将 P/U、N/D 对应分支的电流相减并积分，返回分析表；不连接仪器。
 def analyze_pund_triangle_diff(df_ch1, df_ch2, *, channels=None, parameters=None):
     """Subtract and integrate corresponding branches of triangular PUND pulses."""
     parameters = params if parameters is None else parameters
@@ -457,6 +476,8 @@ def analyze_pund_triangle_diff(df_ch1, df_ch2, *, channels=None, parameters=None
     }
 
 
+# 以本文件 params 为基础合并 params_override，再采集、分析并保存本次 PUND_tri。
+# preview_only=True 时只预览；实测返回参数、接受的量程及输出路径，数据保存在工作簿中。
 def run_test(
     params_override=None,
     *,

@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：PV2；先改 INST、CH1/CH2、params、SEGARB_OPTIONS 和 SAVE_DIR。
+# 流程：run_test 合并参数 → 生成波形 → 采集/量程检查 → 分析极化 → 保存工作簿和图片。
+# PREVIEW_ONLY=True 时只预览；调用 run_test 时 params_override 覆盖同名默认参数。
+# 波形在 make_pv2_seq_configs 中定义；分析函数处理已读出的数据，不连接仪器。
+# 实测接受的 Irange1/Irange2 会回写默认量程；电压、时序等其他覆盖值不回写。
+
 """PV2 segARB test with direct sequence definitions."""
 
 from pathlib import Path
@@ -49,6 +56,7 @@ PREVIEW_ONLY = True
 SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L30_3")
 
 
+# 把返回的采样点均分为带等待和不带等待的两条 PV 回线。
 def _split_complete_loops(time, voltage, current):
     """Split measured points equally into delayed and non-delayed loops."""
     point_count = len(voltage)
@@ -61,6 +69,7 @@ def _split_complete_loops(time, voltage, current):
         (time[split_index:], voltage[split_index:], current[split_index:]),
     )
 
+# 把两条回线整理为并排四列表格；点数不等时以 NaN 补齐。
 def _build_loop_sheet(delay_loop, no_delay_loop):
     """Build one four-column loop table, padding unequal point counts with NaN."""
     return pd.DataFrame(
@@ -73,6 +82,7 @@ def _build_loop_sheet(delay_loop, no_delay_loop):
     )
 
 
+# 为本次数据和图片预留同一个文件主名；会在输出目录登记编号，避免覆盖。
 def build_fname_base(*, parameters=None, save_dir=None):
     """Reserve one short output stem shared by the workbook and its plots."""
     parameters = params if parameters is None else parameters
@@ -85,6 +95,7 @@ def build_fname_base(*, parameters=None, save_dir=None):
     return reserve_output_stem(save_dir, name)
 
 
+# 生成双通道 PV2 段波形及采集窗口，供预览或下发仪器；本函数不发送命令。
 def make_pv2_seq_configs(*, channels=None, parameters=None):
     """Build PV2 seq_configs directly in this script."""
     parameters = params if parameters is None else parameters
@@ -141,6 +152,7 @@ def make_pv2_seq_configs(*, channels=None, parameters=None):
     return {ch1: [ch1_config], ch2: [ch2_config]}
 
 
+# 根据本次参数生成波形图；不连接仪器，指定 output_path 时保存预览图片。
 def preview_waveform(output_path=None, *, show=True, title_prefix=None, channels=None, parameters=None):
     """Preview the PV2 waveform without connecting to the PMU."""
     parameters = params if parameters is None else parameters
@@ -155,6 +167,7 @@ def preview_waveform(output_path=None, *, show=True, title_prefix=None, channels
     )
 
 
+# 把本次实验参数和仪器选项整理为参数表，供结果文件记录；不执行测量。
 def build_params_table(*, channels=None, inst=None, parameters=None, segarb_options=None):
     """Return the PV2 run parameters as a two-column table."""
     parameters = params if parameters is None else parameters
@@ -176,6 +189,8 @@ def build_params_table(*, channels=None, inst=None, parameters=None, segarb_opti
     return pd.DataFrame(rows)
 
 
+# 通过已有 query 连接采集双通道数据，按结果调整固定电流量程后重测，返回双通道数据。
+# 更新本次 parameters，并把接受的 Irange1/Irange2 记回本文件默认参数；重测会再次施加波形。
 def acquire_with_auto_range(query, *, channels=None, parameters=None, segarb_options=None):
     """Repeat PV2 acquisition until both channel ranges are suitable."""
     parameters = params if parameters is None else parameters
@@ -183,6 +198,7 @@ def acquire_with_auto_range(query, *, channels=None, parameters=None, segarb_opt
     ch1, ch2 = channels
     segarb_options = remap_channel_options(SEGARB_OPTIONS, (CH1, CH2), channels, segarb_options)
 
+    # 按给定固定量程执行一次波形，读取双通道数据并关闭输出；空数据会报错。
     def acquire_once(ranges):
         current_ranges = {ch1: ranges["Irange1"], ch2: ranges["Irange2"]}
         execute_segARB_test(
@@ -216,6 +232,7 @@ def acquire_with_auto_range(query, *, channels=None, parameters=None, segarb_opt
     return result
 
 
+# 从零电荷开始积分电流，再平移极化，使正负剩余极化值对称。
 def _integrate_loop_from_zero(time, voltage, current, area_cm2, *, parameters=None):
     """Integrate from Q=0, then shift polarization so the two Pr values are symmetric."""
     parameters = params if parameters is None else parameters
@@ -266,6 +283,7 @@ def _integrate_loop_from_zero(time, voltage, current, area_cm2, *, parameters=No
     )
 
 
+# 拆分并独立积分两条 PV 回线，返回各通道的分析表；不连接仪器。
 def analyze_pv2(df_ch1, df_ch2, *, channels=None, parameters=None):
     """Split points in half and integrate each PV2 loop independently from zero."""
     parameters = params if parameters is None else parameters
@@ -312,6 +330,7 @@ def analyze_pv2(df_ch1, df_ch2, *, channels=None, parameters=None):
     }
 
 
+# 将原始双通道数据、PV2 分析结果和参数写入同一个 Excel 文件。
 def save_pv2_workbook(
     output_path,
     df_ch1,
@@ -342,6 +361,8 @@ def save_pv2_workbook(
     return output_path
 
 
+# 以本文件 params 为基础合并 params_override，再采集、分析并保存本次 PV2。
+# preview_only=True 时只预览；实测返回参数、接受的量程及输出路径，数据保存在工作簿中。
 def run_test(
     params_override=None,
     *,

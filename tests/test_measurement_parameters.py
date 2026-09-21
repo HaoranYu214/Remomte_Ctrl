@@ -25,7 +25,7 @@ class MeasurementParametersTests(unittest.TestCase):
         self.persist = patcher.start()
         self.addCleanup(patcher.stop)
         from measurements.pmu.fe_cap import PV2, PUND_tri, PUND_Squr
-        from workflows import pv_and_pund, pv2_pund_map
+        from measurements.workflows import pv_and_pund, pv2_pund_map
         dictionaries = [PV2.params, PUND_tri.params, PUND_Squr.params,
                         pv_and_pund.PV2_PARAMS, pv_and_pund.PUND_PARAMS,
                         pv2_pund_map.PV2_BASE_PARAMS, pv2_pund_map.PUND_BASE_PARAMS]
@@ -159,7 +159,7 @@ class MeasurementParametersTests(unittest.TestCase):
             self.assertGreater(len(stages), 1)
 
     def test_workflow_preview_does_not_modify_imported_measurement(self):
-        from workflows.pv_and_pund import preview_pv_and_pund
+        from measurements.workflows.pv_and_pund import preview_pv_and_pund
         from measurements.pmu.fe_cap import PV2, PUND_tri
         before = deepcopy(PV2.params)
         with mock.patch.object(PV2, 'preview_waveform') as pv_preview, \
@@ -187,7 +187,7 @@ class MeasurementParametersTests(unittest.TestCase):
         self.assertEqual(ftj_RV2.params, original)
 
     def test_map_summary_uses_final_run_ranges_without_polluting_defaults(self):
-        from workflows import pv2_pund_map
+        from measurements.workflows import pv2_pund_map
         from measurements.pmu.fe_cap import PV2
         original = deepcopy(PV2.params)
         def adjust(acquire, initial, extractors, **kwargs):

@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：ftj_Identical_V2；先改本文件的 INST、CH1/CH2、params、CURRENT_RANGES 和 SAVE_DIR。
+# 流程：run_test 合并本次参数 → build_waveform 构造波形 → PMU 执行/读回 → 整理并保存结果。
+# PREVIEW_ONLY=True 时只预览；run_test 的显式参数优先于文件默认值。
+# 查看波形定义从 build_waveform 开始；一般改实验条件不需要修改下方辅助函数。
+
 """FTJ Identical V2: separate executions with real Python inter-pulse waits."""
 
 from pathlib import Path
@@ -72,6 +78,8 @@ READ_SEQ_ID = 2
 WRITE_NEGATIVE_SEQ_ID = 3
 
 
+# 根据 parameters 和 channels 生成本次波形配置、执行顺序及关联信息。
+# 返回供测量和预览共用的字典；只计算波形，不连接仪器。
 def build_waveform(*, parameters=None, channels=None):
     """Build pulse arrays and execution metadata from this run's parameters."""
     parameters = params if parameters is None else parameters
@@ -165,6 +173,7 @@ def build_waveform(*, parameters=None, channels=None):
     }
 
 
+# 返回两个通道的单脉冲配置：第一通道施加脉冲，第二通道保持零电压。
 def _pulse_config(seq_id, voltage, time_values, meas_types, meas_start, meas_stop, *, base_v):
     ch1_start = [base_v, voltage, voltage, base_v]
     ch1_stop = [voltage, voltage, base_v, base_v]
@@ -180,6 +189,7 @@ def _pulse_config(seq_id, voltage, time_values, meas_types, meas_start, meas_sto
     return ch1_config, ch2_config
 
 
+# 离线预览正写入、读回、负写入三个基本脉冲；此图不展开完整循环和主机等待。
 def preview_waveform(
     output_path=None,
     *,
@@ -202,6 +212,8 @@ def preview_waveform(
     )
 
 
+# 通过已有 query 连接执行一个写入或读回步骤，返回双通道数据。
+# 检查仪器错误，并在结束或异常时关闭输出。
 def run_single_test(query, test, *, channels=None, current_ranges=None, segarb_options=None):
     channels = tuple(channels) if channels is not None else (CH1, CH2)
     ch1, ch2 = channels
@@ -210,6 +222,7 @@ def run_single_test(query, test, *, channels=None, current_ranges=None, segarb_o
 
     clear_kxci_error(query)
 
+    # 发送命令并返回响应；在 EXECUTE 前后检查 KXCI 错误，避免把未启动误判为完成。
     def checked_query(command):
         # Idle status is also returned when EXECUTE never started (7-32).
         # Check configuration before starting, then catch final verification errors.
@@ -239,6 +252,7 @@ def run_single_test(query, test, *, channels=None, current_ranges=None, segarb_o
 
 
 
+# 将当前进度写入临时工作簿，写完后替换目标文件，保留已完成步骤的数据。
 def save_checkpoint(path, rows, frames, params_df):
     """Replace one workbook only after its updated checkpoint is fully written."""
     import os
@@ -258,6 +272,9 @@ def save_checkpoint(path, rows, frames, params_df):
             os.unlink(temporary)
 
 
+# 合并 params_override 后逐次执行写入/读回，并在步骤之间使用 Python 等待。
+# preview_only=True 时只预览；save_results=True 时逐步更新工作簿，中断也保存当前进度。
+# 返回汇总表、拼接数据、输出路径和本次参数。
 def run_test(
     params_override=None,
     *,

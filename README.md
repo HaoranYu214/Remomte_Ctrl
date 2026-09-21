@@ -15,7 +15,7 @@ editable experiment recipes, multi-step workflows, and vendor references.
 - `measurements/pmu`: editable PMU experiment recipes grouped by device/test type.
   See the [FET entry guide](measurements/pmu/fet/README.md) for pulse, program/read, and sweep entry points.
 - `measurements/smu`: editable SMU experiment recipes.
-- `workflows`: multi-test measurement packages and one-click routes.
+- `measurements/workflows`: multi-test measurement packages and one-click routes.
 - `src/keithley4200/tools`: offline preview and dry-run helpers.
 - `reference`: official examples and manuals; not maintained as production code.
 - `tests`: hardware-free unit tests using fake instrument responses.
@@ -99,7 +99,7 @@ installation without the experiment files requires an explicit script path.
 ## Usage navigation
 
 - [Measurement entries](measurements/README.md): choose a test and adjust device parameters.
-- [Workflows](workflows/README.md): batch sweeps and multi-step measurements.
+- [Workflows](measurements/workflows/README.md): batch sweeps and multi-step measurements.
 - [Shared source](src/README.md): package structure and tools.
 - [Parameter and mode reference](reference/manuals/PARAMETER_LIMITS.md): voltage/current ranges, SMU compliance, mode codes such as 0/1/2, and source page numbers.
 - [Tests](tests/README.md): offline verification instructions.
@@ -120,7 +120,7 @@ Parameter source: [manual limits and mode reference (Chinese)](reference/manuals
 - src/keithley4200/smu：SMU System/User Mode 命令及 RPM 路由。
 - measurements/pmu：按器件和测试类型组织的 PMU 实验；入口见 [FET 指南](measurements/pmu/fet/README.md)。
 - measurements/smu：可编辑的 SMU 实验。
-- workflows：多测试组合与参数扫描。
+- measurements/workflows：多测试组合与参数扫描。
 - src/keithley4200/tools：离线预览及 dry-run。
 - reference：官方示例和手册，不作为维护中的实验代码。
 - tests：使用模拟仪器响应的离线测试。
@@ -156,7 +156,7 @@ PV/PUND 极化图只画 I2；I1 原始数据和分析表仍保存。
 
 ## 中文使用导航
 - [测量入口](measurements/README.md)：选测试、改器件参数。
-- [工作流](workflows/README.md)：批量扫描和多步测量。
+- [工作流](measurements/workflows/README.md)：批量扫描和多步测量。
 - [公共源码](src/README.md)：包结构及工具。
 - [参数与模式速查](reference/manuals/PARAMETER_LIMITS.md)：电压、电流档、SMU 限流、0/1/2 等模式码及来源页码。
 - [测试说明](tests/README.md)：离线验证方式。

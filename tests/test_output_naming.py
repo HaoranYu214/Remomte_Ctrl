@@ -134,7 +134,7 @@ class OutputNamingTests(unittest.TestCase):
                     self.assertIn("saved_at", module.build_params_table()["name"].tolist())
 
     def test_repeated_maps_save_time_summaries_without_extra_directories(self):
-        from workflows import pv2_pund_map as workflow
+        from measurements.workflows import pv2_pund_map as workflow
         import pandas as pd
 
         def fake_test(module, test_name, base_params, save_dir, vp, frequency, delay, index, total):
@@ -167,17 +167,17 @@ class OutputNamingTests(unittest.TestCase):
                 self.assertNotIn("output_files", rows.columns)
 
     def test_package_failure_does_not_change_configured_directories(self):
-        from workflows import package1
+        from measurements.workflows import FEcap_package1
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
             dirs = {"stage": base / "stage"}
-            with mock.patch.multiple(package1, BASE_SAVE_DIR=base, SAVE_DIRS=dirs), mock.patch.object(
-                package1, "load_test_modules", side_effect=RuntimeError("failure")
+            with mock.patch.multiple(FEcap_package1, BASE_SAVE_DIR=base, SAVE_DIRS=dirs), mock.patch.object(
+                FEcap_package1, "load_test_modules", side_effect=RuntimeError("failure")
             ):
                 with self.assertRaisesRegex(RuntimeError, "failure"):
-                    package1.run_package()
-                self.assertEqual(package1.BASE_SAVE_DIR, base)
-                self.assertIs(package1.SAVE_DIRS, dirs)
+                    FEcap_package1.run_package()
+                self.assertEqual(FEcap_package1.BASE_SAVE_DIR, base)
+                self.assertIs(FEcap_package1.SAVE_DIRS, dirs)
 
 
 if __name__ == "__main__":

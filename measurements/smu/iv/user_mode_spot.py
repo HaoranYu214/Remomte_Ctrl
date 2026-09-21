@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：SMU 单点 I–V；先改 INST、CHANNEL、SOURCE_VOLTAGE、CURRENT_COMPLIANCE 和接线。
+# 流程：main → 初始化 User Mode → 施加电压 → 等待/读电流 → 打印结果 → 关闭源并恢复路由。
+# SETTLE_TIME_S 是读前等待，DEVICE_AREA_CM2 用于计算电流密度；本入口不自动保存文件。
+
 """User Mode spot I-V example with explicit compliance and shutdown."""
 
 from pathlib import Path
@@ -41,6 +46,8 @@ SMU_CONNECTIONS = {
 }
 
 
+# 连接 SMU 施加 SOURCE_VOLTAGE，等待后读电流并打印电流密度，最后关闭源并恢复路由。
+# 此入口只在终端打印单点结果，不保存工作簿。
 def main():
     if DEVICE_AREA_CM2 <= 0:
         raise ValueError("DEVICE_AREA_CM2 must be positive.")
