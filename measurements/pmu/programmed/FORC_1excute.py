@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：整组曲线一次连续执行的 FORC；先改 PARAMS、REVERSAL_*、INST、通道和 SAVE_DIR。
+# 流程：build_combined_forc_layout 拼接波形 → 一次执行/读回 → 拆分各反转曲线 → 分析并保存。
+# 文件末尾按 PREVIEW_ONLY 分流；main 和使用已有连接的 run_forc_test 均执行实测。
+
 """Run the complete ferroelectric FORC family in one PMU execution.
 
 Unlike ``FORC.py``, this entry initializes and enables the PMU only once. The
@@ -67,10 +72,12 @@ SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\FORC")
 PREVIEW_ONLY = True
 
 
+# 根据反转电压计算单分支时长，使不同 FORC 曲线保持相同电压变化速率。
 def _branch_time(params, reversal_voltage):
     return separate_forc._branch_time(params, reversal_voltage)
 
 
+# 构造并校验包含全部反转曲线的连续序列，同时记录采集段归属。
 def build_combined_forc_layout(
     ch1=CH1,
     ch2=CH2,
@@ -96,6 +103,7 @@ def build_combined_forc_layout(
     measure_types = []
     measured_segments = []
 
+    # 向连续 FORC 波形追加一个段；有 metadata 时一并记录采集段位置和时长。
     def add_segment(start, stop, duration, measure_type, metadata=None):
         starts.append(float(start))
         stops.append(float(stop))
@@ -193,6 +201,7 @@ def build_combined_forc_layout(
     }
 
 
+# 返回包含全部反转曲线的单序列双通道配置，供预览和一次执行共用。
 def make_forc_seq_configs(
     ch1=CH1,
     ch2=CH2,
@@ -208,6 +217,7 @@ def make_forc_seq_configs(
     )["seq_configs"]
 
 
+# 离线预览整组 FORC 一次执行的连续波形；不连接仪器。
 def preview_forc_waveforms(
     output_path=None,
     *,
@@ -296,6 +306,7 @@ def preview_forc_waveforms(
     return output_path
 
 
+# 根据共同采样率和各采集窗口时长分配点数，供连续 FORC 数据拆分。
 def _allocate_measured_segment_counts(point_count, measured_segments):
     """Allocate returned points using the common sample rate and window times."""
     if point_count < 3 * len(measured_segments):
@@ -316,6 +327,7 @@ def _allocate_measured_segment_counts(point_count, measured_segments):
     return counts.tolist()
 
 
+# 对已拆分的一条下降/返回分支进行积分，生成该反转电压的分析结果。
 def _analyze_curve_segments(
     descending_ch1,
     return_ch1,
@@ -392,6 +404,7 @@ def _analyze_curve_segments(
     )
 
 
+# 按波形布局把一次读出的连续缓冲区拆回各条 FORC 曲线并分析。
 def split_combined_forc_data(
     df_ch1,
     df_ch2,
@@ -452,6 +465,8 @@ def split_combined_forc_data(
     return raw_ch1_frames, raw_ch2_frames, forc_frames
 
 
+# 使用已有 query 连接一次执行整组 FORC，读回后按反转曲线拆分、分析和保存。
+# 返回拆分结果及输出信息；params 和 reversal_voltages 指定本次配置。
 def run_forc_test(
     query,
     *,
@@ -536,6 +551,7 @@ def run_forc_test(
     }
 
 
+# 创建 PMU 会话并调用 run_forc_test 实测；文件末尾负责按 PREVIEW_ONLY 选择预览或测量。
 def main():
     with PMUSession(INST, channels=(CH1, CH2)) as session:
         run_forc_test(session.query)

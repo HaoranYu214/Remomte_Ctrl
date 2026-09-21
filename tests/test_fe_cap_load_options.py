@@ -14,7 +14,7 @@ from keithley4200.pmu.pmu_tests import _apply_common_pmu_options
 
 
 FE_CAP_ROOT = REPO_ROOT / "measurements" / "pmu" / "fe_cap"
-WORKFLOW_ROOT = REPO_ROOT / "workflows"
+WORKFLOW_ROOT = REPO_ROOT / "measurements" / "workflows"
 DIRECT_ENTRY_FILES = [
     FE_CAP_ROOT / "PV2.py",
     FE_CAP_ROOT / "PUND_Squr.py",

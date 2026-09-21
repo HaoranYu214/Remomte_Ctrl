@@ -13,14 +13,16 @@
 
 Workflow parameter tables override the corresponding lower-level entry settings, so edit these tables first for batch measurements. STOP_ON_ERROR=True stops later stages after an error; False allows the workflow to continue and record failures. SETTLE_TIME_S is a Python wait between stages, not an instrument pulse delay.
 
+Preview selection: `pv_and_pund.py`, `package1.py`, and `ftj_package1.py` check `PREVIEW_ONLY` in `main`. Their `run_*` functions execute measurements directly. `pv2_pund_map.py` has no preview switch and runs measurements when launched. Accepted PV/PUND current ranges may be written back to both the measurement and active workflow settings; other experimental overrides are not persisted this way.
+
 The map converts frequency to rise_time=1/(4f). This describes the nominal triangular-wave frequency only; delay and conditioning segments increase the actual total duration. All expanded segments must still respect the manual's timing limits.
 
 Outputs use configured directories and summaries include time. r001/r002 identifies output groups sharing the same base name. Boolean RUN_* and PREVIEW_ONLY parameters are switches, distinct from instrument mode codes.
 
-Parameter source: [manual limits and mode reference (Chinese)](../reference/manuals/PARAMETER_LIMITS.md).
+Parameter source: [manual limits and mode reference (Chinese)](../../reference/manuals/PARAMETER_LIMITS.md).
 
 
-Parameter API: [standalone and workflow configuration](../measurements/pmu/README.md#standalone-and-workflow-configuration).
+Parameter API: [standalone and workflow configuration](../pmu/README.md#standalone-and-workflow-configuration).
 
 Summary output uses one Excel workbook per invocation, updated as progress is recorded. No duplicate live CSV or output-path columns are saved; runtime return values can still provide paths to callers.
 
@@ -37,12 +39,14 @@ Summary output uses one Excel workbook per invocation, updated as progress is re
 
 工作流自己的参数表会覆盖下层入口的相应设置；批量测量时优先改这里的配置。STOP_ON_ERROR=True 表示遇到错误停止后续阶段，False 表示允许按流程继续并记录失败。SETTLE_TIME_S 是 Python 阶段间等待，不是仪器脉冲延迟。
 
+预览入口：`pv_and_pund.py`、`package1.py` 和 `ftj_package1.py` 由 `main` 检查 `PREVIEW_ONLY`；直接调用它们的 `run_*` 函数会实测。`pv2_pund_map.py` 没有预览开关，直接运行会实测。PV/PUND 接受的电流量程可能回写独立测量及当前 workflow 设置；其他实验覆盖参数不按这种方式回写。
+
 map 中 frequency 转换为 rise_time=1/(4f)，仅表示三角波的标称频率；delay 和其他预处理段会增加实际总时间。所有展开后的真实时间段仍受手册边界约束。
 
 保存按配置目录执行，汇总表含 time；r001/r002 是同名输出组编号。RUN_*、PREVIEW_ONLY 等布尔值在参数表中表示开关，不能和仪器模式码混为一谈。
 
-参数依据：[手册限制与模式速查](../reference/manuals/PARAMETER_LIMITS.md)。
+参数依据：[手册限制与模式速查](../../reference/manuals/PARAMETER_LIMITS.md)。
 
-参数接口：[独立运行与工作流配置](../measurements/pmu/README.md#独立运行与工作流配置)。
+参数接口：[独立运行与工作流配置](../pmu/README.md#独立运行与工作流配置)。
 
 每轮只保存一份 Excel 汇总，随进度更新，不再保存重复的实时 CSV 或输出路径列；函数返回值仍可向调用方提供运行时路径。

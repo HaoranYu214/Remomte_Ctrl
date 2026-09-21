@@ -16,7 +16,7 @@ from measurements.pmu.ftj import (
     ftj_RV1, ftj_RV2, ftj_PWM, ftj_MRD, ftj_Identical_V1, ftj_Identical_V2,
     ftj_ISPP_V1, ftj_ISPP_V2, ftj_endurance,
 )
-from workflows import ftj_package1
+from measurements.workflows import ftj_package1
 
 MODULES = (ftj_RV1, ftj_RV2, ftj_PWM, ftj_MRD, ftj_Identical_V1,
            ftj_Identical_V2, ftj_ISPP_V1, ftj_ISPP_V2)

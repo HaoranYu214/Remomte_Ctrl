@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：每条曲线独立执行的 FORC；先改 PARAMS、REVERSAL_*、INST、通道和 SAVE_DIR。
+# 流程：校验参数/生成曲线 → 逐条执行并读回 → 积分 → 每条保存进度 → 保存曲线族图。
+# 文件末尾按 PREVIEW_ONLY 分流；main 和使用已有连接的 run_forc_test 均执行实测。
+
 """Ferroelectric first-order reversal-curve (FORC) measurement.
 
 Each curve starts from the positive saturation voltage, descends to one
@@ -64,6 +69,7 @@ SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\FORC")
 PREVIEW_ONLY = True
 
 
+# 校验反转电压有限且处于允许区间，返回可用于构造 FORC 的电压列表。
 def _validated_reversal_voltages(params, reversal_voltages):
     """Return finite reversal levels inside [-Vmax, +Vmax)."""
     vmax = float(params["Vmax"])
@@ -82,6 +88,7 @@ def _validated_reversal_voltages(params, reversal_voltages):
     return values
 
 
+# 检查 FORC 时间、电流量程、偏置和器件面积等参数；不连接仪器。
 def _validate_params(params):
     """Validate timing, current-range, offset, and device-area parameters."""
     _validated_reversal_voltages(params, (0.0,))
@@ -101,6 +108,7 @@ def _validate_params(params):
         raise ValueError("offset must be finite.")
 
 
+# 根据反转电压计算单分支时长，使不同 FORC 曲线保持相同电压变化速率。
 def _branch_time(params, reversal_voltage):
     """Keep dV/dt constant for all reversal excursions."""
     vmax = float(params["Vmax"])
@@ -111,6 +119,7 @@ def _branch_time(params, reversal_voltage):
     )
 
 
+# 为每个反转电压生成一组双通道 FORC 配置；每条曲线独立执行。
 def make_forc_seq_configs(
     ch1=CH1,
     ch2=CH2,
@@ -188,6 +197,7 @@ def make_forc_seq_configs(
     return {ch1: ch1_configs, ch2: ch2_configs}
 
 
+# 离线预览各条独立 FORC 波形；图中的排列不表示一次连续硬件执行。
 def preview_forc_waveforms(
     output_path=None,
     *,
@@ -274,6 +284,7 @@ def preview_forc_waveforms(
     return output_path
 
 
+# 按时间数组对电流作累积梯形积分，返回从零开始的电荷数组。
 def _cumulative_trapezoid(current, time_values):
     current = np.asarray(current, dtype=float)
     time_values = np.asarray(time_values, dtype=float)
@@ -287,6 +298,7 @@ def _cumulative_trapezoid(current, time_values):
     return charge
 
 
+# 整理一条下降/返回曲线，并从正饱和起点积分；返回相对极化分析表。
 def analyze_forc_curve(
     df_ch1,
     df_ch2,
@@ -342,6 +354,7 @@ def analyze_forc_curve(
     )
 
 
+# 把本次实验参数和仪器选项整理为参数表，供结果文件记录；不执行测量。
 def build_params_table(params, reversal_voltages, segarb_options):
     rows = [{"name": name, "value": repr(value)} for name, value in params.items()]
     rows.append({"name": "REVERSAL_VOLTAGES", "value": repr(list(reversal_voltages))})
@@ -359,6 +372,7 @@ def build_params_table(params, reversal_voltages, segarb_options):
     return pd.DataFrame(rows)
 
 
+# 把当前已完成的 FORC 曲线、原始数据和参数保存为工作簿进度记录。
 def save_forc_workbook(
     output_path,
     raw_ch1_frames,
@@ -388,6 +402,7 @@ def save_forc_workbook(
     return output_path
 
 
+# 保存 FORC 返回分支的极化和电流曲线族图片。
 def save_forc_plots(forc_data, output_stem):
     """Save return-branch polarization and current families."""
     output_stem = Path(output_stem)
@@ -437,6 +452,8 @@ def save_forc_plots(forc_data, output_stem):
     return polarization_path, current_path
 
 
+# 使用已有 query 连接逐条采集 FORC，每完成一条就保存当前进度，最后输出曲线图。
+# 返回各曲线数据及输出信息；params 和 reversal_voltages 指定本次配置。
 def run_forc_test(
     query,
     *,
@@ -544,6 +561,7 @@ def run_forc_test(
     }
 
 
+# 创建 PMU 会话并调用 run_forc_test 实测；文件末尾负责按 PREVIEW_ONLY 选择预览或测量。
 def main():
     with PMUSession(INST, channels=(CH1, CH2)) as session:
         run_forc_test(session.query)

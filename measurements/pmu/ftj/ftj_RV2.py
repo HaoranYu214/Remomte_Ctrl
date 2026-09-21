@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：ftj_RV2；先改本文件的 INST、CH1/CH2、params、CURRENT_RANGES 和 SAVE_DIR。
+# 流程：run_test 合并本次参数 → build_waveform 构造波形 → PMU 执行/读回 → 整理并保存结果。
+# PREVIEW_ONLY=True 时只预览；run_test 的显式参数优先于文件默认值。
+# 查看波形定义从 build_waveform 开始；一般改实验条件不需要修改下方辅助函数。
+
 """FTJ RV script with one prepost sequence and one full write+read scan sequence."""
 """从+VP开始测试, 到-Vp然后回到VP"""
 
@@ -68,6 +74,7 @@ params = {
 }
 
 
+# 生成从起点走到终点的电平列表，包含两端点。
 def _levels_between(start_level, stop_level, step):
     """Return inclusive levels from start_level to stop_level."""
     if start_level == stop_level:
@@ -85,6 +92,7 @@ def _levels_between(start_level, stop_level, step):
     levels.append(round(stop_level, 10))
     return levels
 
+# 生成 +Vp → −Vp → +Vp 的相对电压路径，并按 cycles 重复。
 def voltage_sweep_path(vp, step, cycles=1):
     """Return relative levels: +Vp -> -Vp -> +Vp, repeated for the requested cycles."""
     if vp == 0:
@@ -101,6 +109,7 @@ def voltage_sweep_path(vp, step, cycles=1):
         path.extend(up_leg[1:])
     return path
 
+# 向时间—电压端点列表追加一个波形块，用于重建指令波形图。
 def _extend_trace_points(points, start_v, stop_v, time_values, start_time, *, add_gap=True):
     """Append t-V endpoint pairs for one waveform block."""
     cursor = start_time
@@ -114,6 +123,8 @@ def _extend_trace_points(points, start_v, stop_v, time_values, start_time, *, ad
     return cursor
 
 
+# 根据 parameters 和 channels 生成本次波形配置、执行顺序及关联信息。
+# 返回供测量和预览共用的字典；只计算波形，不连接仪器。
 def build_waveform(*, parameters=None, channels=None):
     """Build pulse arrays and execution metadata from this run's parameters."""
     parameters = params if parameters is None else parameters
@@ -190,6 +201,7 @@ def build_waveform(*, parameters=None, channels=None):
     }
 
 
+# 返回从基线到目标电压再回到基线的脉冲段数组，供组装完整序列。
 def build_pulse_block(level, time_values, *, base_v, offset_v):
     """Return a base -> (write offset + relative level) -> base pulse."""
     target_v = offset_v + level
@@ -198,6 +210,7 @@ def build_pulse_block(level, time_values, *, base_v, offset_v):
     return start_v, stop_v, list(time_values)
 
 
+# 生成单个预置脉冲的双通道序列配置。
 def make_prepost_sequence(
     *,
     base_v,
@@ -224,6 +237,7 @@ def make_prepost_sequence(
     return ch1_config, ch2_config
 
 
+# 将一组扫描电压转成逐点写入—小电压读回的双通道序列。
 def make_scan_sequence(
     seq_id,
     voltages,
@@ -283,6 +297,7 @@ def make_scan_sequence(
     return ch1_config, ch2_config
 
 
+# 按每个扫描点的段数拆分电压列表，避免单个序列超过段数上限。
 def chunk_scan_voltages(voltages, *, max_segments_per_seq, segments_per_scan_point):
     """Split scan voltages into multiple sequences to stay below the PMU segment limit."""
     max_points_per_seq = max(1, max_segments_per_seq // segments_per_scan_point)
@@ -292,6 +307,7 @@ def chunk_scan_voltages(voltages, *, max_segments_per_seq, segments_per_scan_poi
     ]
 
 
+# 根据本次参数生成波形图；不连接仪器，指定 output_path 时保存预览图片。
 def preview_waveform(
     output_path=None,
     *,
@@ -315,6 +331,7 @@ def preview_waveform(
     )
 
 
+# 把指令波形整理成时间—电压表，供导出和绘图；它不是仪器采集数据。
 def build_waveform_trace_table(*, channels=None, parameters=None, waveform=None):
     """Return one wide t-V table for plotting prepost, write, and read waveforms."""
     parameters = params if parameters is None else parameters
@@ -367,6 +384,7 @@ def build_waveform_trace_table(*, channels=None, parameters=None, waveform=None)
     return pd.DataFrame({name: pd.Series(values) for name, values in trace_columns.items()})
 
 
+# 把原始通道数据与写入条件对齐，返回逐读点的结果表。
 def build_readback_table(df_ch1, df_ch2, *, channels=None, parameters=None, waveform=None):
     """Return only the readback points, one row per commanded write level."""
     parameters = params if parameters is None else parameters
@@ -404,6 +422,9 @@ def build_readback_table(df_ch1, df_ch2, *, channels=None, parameters=None, wave
     return rv_df
 
 
+# 合并 params_override 并生成波形，执行循环写电压扫描与逐点读回。
+# preview_only=True 时只预览；实测返回数据及输出路径，save_results 控制结果文件保存。
+# 未覆盖参数沿用本文件默认值；电流量程和通道可通过关键字参数单独指定。
 def run_test(
     params_override=None,
     *,

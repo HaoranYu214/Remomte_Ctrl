@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：ftj_MRD；先改本文件的 INST、CH1/CH2、params、CURRENT_RANGES 和 SAVE_DIR。
+# 流程：run_test 合并本次参数 → build_waveform 构造波形 → PMU 执行/读回 → 整理并保存结果。
+# PREVIEW_ONLY=True 时只预览；run_test 的显式参数优先于文件默认值。
+# 查看波形定义从 build_waveform 开始；一般改实验条件不需要修改下方辅助函数。
+
 """FTJ multilevel resistance distribution (MRD) measurement.
 
 MRD means Multilevel Resistance Distribution.
@@ -93,6 +99,7 @@ params = {
 
 PREVIEW_ONLY = False
 
+# 按序列信息生成预期读点顺序，供实际读回数据对齐循环和写入电压。
 def expected_cycle_table(seq_metadata):
     """Return the expected read-point order from the sequence plan."""
     rows = []
@@ -116,6 +123,7 @@ def expected_cycle_table(seq_metadata):
             )
     return pd.DataFrame(rows)
 
+# 向时间—电压端点列表追加一个波形块，用于重建指令波形图。
 def _extend_trace_points(points, start_v, stop_v, time_values, start_time, *, add_gap=True):
     """Append t-V endpoint pairs for one waveform block."""
     cursor = start_time
@@ -128,6 +136,7 @@ def _extend_trace_points(points, start_v, stop_v, time_values, start_time, *, ad
         points.append((None, None))
     return cursor
 
+# 按写入电压分组统计电阻分布，便于比较不同电平的离散程度。
 def build_distribution_summary(result_df):
     """Summarize resistance distribution for each write level."""
     if result_df.empty:
@@ -148,6 +157,8 @@ def build_distribution_summary(result_df):
     return summary_df
 
 
+# 根据 parameters 和 channels 生成本次波形配置、执行顺序及关联信息。
+# 返回供测量和预览共用的字典；只计算波形，不连接仪器。
 def build_waveform(*, parameters=None, channels=None):
     """Build pulse arrays and execution metadata from this run's parameters."""
     parameters = params if parameters is None else parameters
@@ -225,6 +236,7 @@ def build_waveform(*, parameters=None, channels=None):
     }
 
 
+# 返回从基线到目标电压再回到基线的脉冲段数组，供组装完整序列。
 def build_pulse_block(amplitude, time_values, *, base_v):
     """Return a 4-segment base -> absolute target -> base pulse block."""
     start_v = [base_v, amplitude, amplitude, base_v]
@@ -232,6 +244,7 @@ def build_pulse_block(amplitude, time_values, *, base_v):
     return start_v, stop_v, list(time_values)
 
 
+# 生成一次参考/复位—读回—写入—读回序列，用于比较写入前后状态。
 def build_mrd_sequence(
     seq_id,
     write_voltage,
@@ -292,6 +305,7 @@ def build_mrd_sequence(
     return ch1_config, ch2_config
 
 
+# 为各写入电压分别生成 MRD 序列及对应信息，供执行和读点对齐。
 def build_all_sequences(
     write_voltages,
     *,
@@ -337,6 +351,7 @@ def build_all_sequences(
     return ch1_configs, ch2_configs, seq_plan, seq_metadata
 
 
+# 根据本次参数生成波形图；不连接仪器，指定 output_path 时保存预览图片。
 def preview_waveform(
     output_path=None,
     *,
@@ -360,6 +375,7 @@ def preview_waveform(
     )
 
 
+# 把指令波形整理成时间—电压表，供导出和绘图；它不是仪器采集数据。
 def build_waveform_trace_table(*, channels=None, parameters=None, waveform=None):
     """Return one wide t-V table for plotting reference, write, and read waveforms."""
     parameters = params if parameters is None else parameters
@@ -421,6 +437,7 @@ def build_waveform_trace_table(*, channels=None, parameters=None, waveform=None)
     return pd.DataFrame({name: pd.Series(values) for name, values in trace_columns.items()})
 
 
+# 把原始通道数据与写入条件对齐，返回逐读点的结果表。
 def build_readback_table(df_ch1, df_ch2, *, channels=None, parameters=None, waveform=None):
     """Return one row per measured read point."""
     parameters = params if parameters is None else parameters
@@ -451,6 +468,9 @@ def build_readback_table(df_ch1, df_ch2, *, channels=None, parameters=None, wave
     return result_df
 
 
+# 合并 params_override 并生成波形，执行各电压电平的重复复位/写入/读回。
+# preview_only=True 时只预览；实测返回数据及输出路径，save_results 控制结果文件保存。
+# 未覆盖参数沿用本文件默认值；电流量程和通道可通过关键字参数单独指定。
 def run_test(
     params_override=None,
     *,

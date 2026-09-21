@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：重复分段 I–V；先改 LOOP_COUNT、TURNING_POINTS、SEGMENT_STEP、PARAMS 和 SAVE_DIR。
+# 顶部设置从 segmented_voltage_sweep.py 复制初值，可在本文件修改；调用参数再覆盖本文件配置。
+# 流程：main → run_endurance → 每轮独立分段扫描和保存 → 每轮更新汇总。
+# PREVIEW_ONLY=True 时只预览一轮路径；INTER_RUN_DELAY_S 是轮次间额外等待。
+
 """Repeat complete segmented SMU I-V sweeps, saving each completed run."""
 
 from datetime import datetime
@@ -42,6 +48,9 @@ NAMES = dict(segmented.NAMES)
 # Hardware limits and compliance/range meanings are documented in src/keithley4200/smu.
 
 
+# 合并参数后重复调用分段 I–V 实测，每轮保存数据及状态汇总；失败或中断时停止。
+# preview_only=True 时只预览一轮电压路径；实测返回 summary、summary_path 和 output_paths。
+# inter_run_delay_s 是额外等待，不包含重连、传输和保存所需时间。
 def run_endurance(params_override=None, *, loop_count=None, turning_points=None,
                   segment_step=None, save_dir=None, preview_only=None,
                   inter_run_delay_s=None, inst=None, device_area_cm2=None,
@@ -119,6 +128,7 @@ def run_endurance(params_override=None, *, loop_count=None, turning_points=None,
     return {"summary": rows, "summary_path": summary_path, "output_paths": output_paths}
 
 
+# 按本文件的循环次数、参数和 PREVIEW_ONLY 设置启动 I–V endurance。
 def main():
     return run_endurance()
 

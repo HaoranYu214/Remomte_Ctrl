@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：PV/PUND + map + I–V 组合；先改本文件各阶段参数、RUN_ORDER 和 BASE_SAVE_DIR。
+# 阶段参数集中在 PV2_PARAMS、PUND_PARAMS、PV2_PUND_MAP、IV_TESTS 和 SEGMENTED_IV。
+# 流程：main → 按 PREVIEW_ONLY 预览或实测 → 各阶段调用已有入口 → 逐阶段保存汇总。
+# configure_map/configure_iv 会更新子模块内存配置；本次 workflow 参数以本文件为准。
+
 """One-click FTJ characterization package.
 
 Sequence: initial PV-and-PUND -> PV2/PUND map -> post-map PV-and-PUND ->
@@ -186,15 +192,17 @@ SEGMENTED_IV = {
 # ORCHESTRATION (normally no edits are needed below this line)
 # =============================================================================
 
+# 加载工作流依赖的实验模块并返回名称到模块的字典；不连接仪器。
 def load_test_modules():
     """Import existing tests lazily; importing this package never opens VISA."""
     return {
-        "pair": importlib.import_module("workflows.pv_and_pund"),
-        "map": importlib.import_module("workflows.pv2_pund_map"),
+        "pair": importlib.import_module("measurements.workflows.pv_and_pund"),
+        "map": importlib.import_module("measurements.workflows.pv2_pund_map"),
         "iv": importlib.import_module("measurements.smu.iv.segmented_voltage_sweep"),
     }
 
 
+# 清空并更新目标字典，保留其对象身份，让已有引用也看到新配置。
 def _replace_dict(target, values):
     target.clear()
     target.update(values)
@@ -208,6 +216,7 @@ PAIR_STAGE_NAMES = {
 }
 
 
+# 把本工作流的扫描列表、参数和保存设置写入子 map 模块的内存配置。
 def configure_map(module):
     module.INST = INST
     module.CH1, module.CH2 = CH1, CH2
@@ -231,12 +240,14 @@ def configure_map(module):
 
 
 
+# 把峰值电压转成对称 I–V 路径：0 → +Vmax → 0 → −Vmax → 0。
 def iv_turning_points(vmax_v):
     """Build the package's symmetric segmented I-V path."""
     vmax_v = float(vmax_v)
     return [0.0, vmax_v, 0.0, -vmax_v, 0.0]
 
 
+# 把本工作流的仪器、路径、扫描转折点和测量参数写入子 I–V 模块。
 def configure_iv(module, iv_test):
     module.INST = INST
     module.DEVICE_AREA_CM2 = DEVICE_AREA_CM2
@@ -251,6 +262,7 @@ def configure_iv(module, iv_test):
     module.SAVE_DIR = SAVE_DIRS["segmented_iv"] / str(iv_test["name"])
 
 
+# 检查阶段顺序、重复次数、map 列表及 I–V 点数，返回各类测试规模；不连接仪器。
 def validate_package_config(modules):
     unknown = [name for name in RUN_ORDER if name not in SAVE_DIRS]
     if unknown:
@@ -303,6 +315,7 @@ def validate_package_config(modules):
     }
 
 
+# 按本阶段参数重复执行 PV2/PUND，并记住接受的电流量程供后续使用。
 def run_pv_and_pund_stage(module, stage_name):
     save_root = SAVE_DIRS[stage_name]
     for run_index in range(1, int(PV_AND_PUND_REPEAT_COUNT) + 1):
@@ -329,6 +342,7 @@ def run_pv_and_pund_stage(module, stage_name):
                 )
 
 
+# 配置并执行 PV2/PUND map，汇总接受的量程；子测量失败时向上报告。
 def run_map_stage(module):
     configure_map(module)
     result = module.run_map()
@@ -355,6 +369,7 @@ def run_map_stage(module):
         raise RuntimeError(f"PV2/PUND map contains {len(failed)} failed runs.")
 
 
+# 依次配置各组 I–V 条件并重复测量，在配置的测试间隔后继续。
 def run_iv_stage(module):
     total_runs = sum(int(iv_test["repeat_count"]) for iv_test in IV_TESTS)
     completed_runs = 0
@@ -372,6 +387,8 @@ def run_iv_stage(module):
                 time.sleep(float(SEGMENTED_IV["settle_time_s"]))
 
 
+# 按 RUN_ORDER 执行 PV/PUND、map 和 I–V 阶段，逐阶段保存状态汇总并返回 DataFrame。
+# 本函数直接实测；main 根据 PREVIEW_ONLY 选择此函数或 preview_package。
 def run_package():
     """Run enabled stages and preserve a live package-level audit trail."""
     modules = load_test_modules()
@@ -442,6 +459,7 @@ def run_package():
     return pd.DataFrame(rows)
 
 
+# 按工作流配置生成各阶段的预览并统一显示，返回预览结果；不连接仪器。
 def preview_package():
     """Build every package preview, then display all figures together."""
     import matplotlib.pyplot as plt
@@ -544,6 +562,7 @@ def preview_package():
     return results
 
 
+# 根据 PREVIEW_ONLY 选择整套测量的离线预览或实测，返回对应结果。
 def main():
     if PREVIEW_ONLY:
         return preview_package()

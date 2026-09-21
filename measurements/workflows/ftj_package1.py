@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：FTJ 全套；在本文件改 FTJ_TESTS、RUN_ORDER、INST、通道和 BASE_SAVE_DIR。
+# FTJ_TESTS 各阶段 params/current_ranges 为本套测试的配置；无需同步修改单次入口默认参数。
+# 流程：main → 按 PREVIEW_ONLY 预览或实测 → 按 RUN_ORDER 执行并分别保存。
+# run_package 直接实测；辅助函数 load_test_modules 只加载模块。
+
 """One-file workflow for the standard FTJ characterization package.
 
 Sequence: RV2 -> PWM -> Identical V1 -> MRD. The maintained measurement
@@ -163,6 +169,7 @@ FTJ_TESTS = {
 # ORCHESTRATION (normally no edits are needed below this line)
 # =============================================================================
 
+# 加载工作流依赖的实验模块并返回名称到模块的字典；不连接仪器。
 def load_test_modules():
     """Import the maintained FTJ measurements without opening VISA."""
     return {
@@ -171,6 +178,7 @@ def load_test_modules():
     }
 
 
+# 检查 RUN_ORDER 的阶段名存在且不重复；不连接仪器。
 def validate_package_config():
     unknown = [test_name for test_name in RUN_ORDER if test_name not in FTJ_TESTS]
     if unknown:
@@ -179,6 +187,8 @@ def validate_package_config():
         raise ValueError("RUN_ORDER must not contain duplicate FTJ stages.")
 
 
+# 按 RUN_ORDER 实测 FTJ_TESTS 中的各阶段并保存，返回按阶段名组织的结果字典。
+# 本函数强制子入口实测；预览由 main 的 PREVIEW_ONLY 分支调用 preview_package。
 def run_package(*, modules=None):
     """Run all enabled FTJ stages in order."""
     validate_package_config()
@@ -211,6 +221,7 @@ def run_package(*, modules=None):
     return results
 
 
+# 按工作流配置生成各阶段的预览并统一显示，返回预览结果；不连接仪器。
 def preview_package(*, modules=None, show=True):
     """Build labeled previews for every stage and display them together."""
     import matplotlib.pyplot as plt
@@ -233,6 +244,7 @@ def preview_package(*, modules=None, show=True):
     return figures
 
 
+# 根据 PREVIEW_ONLY 选择整套 FTJ 的离线预览或实测，返回对应结果。
 def main():
     if PREVIEW_ONLY:
         return preview_package()

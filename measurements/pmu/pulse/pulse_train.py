@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：普通双通道脉冲串；先改 params、INST、CH1/CH2 和 TEST_MODE。
+# 保存目录目前在 main 内的 save_dir 中设置；流程为配置脉冲 → 执行/读回 → 关闭输出 → 保存并显示图。
+# main 直接实测；TEST_MODE 是采集模式，不是 PREVIEW_ONLY，0 也不表示离线预览。
+
 """Two-channel pulse-train test."""
 
 from pathlib import Path
@@ -32,6 +37,7 @@ from keithley4200.pmu.pmu_tests import (
 from keithley4200.pmu.session import PMUSession
 
 
+# 通过已有 query 连接配置并执行双通道脉冲串；数据读取和保存由 main 负责。
 def run_dual_channel_pulse_train(query, ch1, ch2, parameters, mode="D"):
     """Configure and run this entry's two-channel pulse-train waveform."""
     mode_number = _get_mode_num(mode)
@@ -141,6 +147,8 @@ TEST_MODE = 1
 RESISTANCE_SCALE = "linear"
 
 
+# 连接 PMU，配置并执行双通道脉冲，读回数据、关闭输出，保存 Excel 并显示结果图。
+# TEST_MODE 控制采集方式，不是离线预览开关。
 def main():
     """Run the configured measurement only when explicitly invoked."""
     width_us = int(params["CH1_WIDTH"] * 1e6)

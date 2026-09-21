@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：普通扫幅脉冲串；先改 params、INST、CH1/CH2、TEST_MODE 和 SAVE_DIR。
+# 流程：main → run_dual_channel_sweep_train 配置/执行 → 读回并关闭输出 → 保存并显示图。
+# main 直接实测；TEST_MODE 是采集模式，不是 PREVIEW_ONLY，0 也不表示离线预览。
+
 """Two-channel sweep plus pulse-train test."""
 
 from pathlib import Path
@@ -32,6 +37,7 @@ from keithley4200.pmu.pmu_tests import (
 from keithley4200.pmu.session import PMUSession
 
 
+# 通过已有 query 连接配置并执行双通道扫幅脉冲串；采集模式由 mode 指定。
 def run_dual_channel_sweep_train(query, ch1, ch2, parameters, mode="D"):
     """Configure and run this entry's sweep-plus-pulse-train waveform."""
     mode_number = _get_mode_num(mode)
@@ -146,6 +152,8 @@ CH1, CH2 = 1, 2
 RESISTANCE_SCALE = "linear"
 SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\FTJ\Refined")
 
+# 连接 PMU，配置并执行双通道脉冲，读回数据、关闭输出，保存 Excel 并显示结果图。
+# TEST_MODE 控制采集方式，不是离线预览开关。
 def main():
     """Run the configured measurement only when explicitly invoked."""
     SAVE_DIR.mkdir(parents=True, exist_ok=True)

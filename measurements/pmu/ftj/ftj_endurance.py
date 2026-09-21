@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：重复运行一个 FTJ 实验；先选 TARGET_MODULE_NAME，再设 LOOP_COUNT 和 SAVE_DIR。
+# TARGET_PARAM_OVERRIDES 只覆盖指定参数，未列出的值继承目标模块 params。
+# TARGET_INST/CHANNELS/CURRENT_RANGES/SEGARB_OPTIONS 为 None 时沿用目标入口对应设置。
+# 流程：main → run_endurance → 逐轮调用目标 run_test → 每轮保存状态汇总。
+# 这里强制实测，不受目标文件 PREVIEW_ONLY 控制；SAVE_EVERY_RUN 控制单轮数据保存。
+
 """External-loop endurance runner for any maintained FTJ measurement.
 
 The target measurement owns its waveform. This runner configures that module,
@@ -63,6 +70,7 @@ STOP_ON_ERROR = True
 FILE_STEM_PREFIX = "ftj_endurance"
 
 
+# 按模块名加载 FTJ 实验入口，返回模块对象；导入本身不连接仪器。
 def load_ftj_module(module_name=None):
     """Import one maintained FTJ measurement module without opening VISA."""
     module_name = TARGET_MODULE_NAME if module_name is None else module_name
@@ -72,6 +80,7 @@ def load_ftj_module(module_name=None):
     return module
 
 
+# 把一轮的编号、状态、起止时间和错误信息整理成汇总记录。
 def make_summary_row(run_index, status, start_time, end_time, error_text):
     return {
         "run_index": run_index,
@@ -83,6 +92,9 @@ def make_summary_row(run_index, status, start_time, end_time, error_text):
     }
 
 
+# 合并目标脚本默认参数与 TARGET_PARAM_OVERRIDES（或 param_overrides），循环调用实测入口。
+# 每轮更新状态汇总，返回 summary_df 和 summary_path；save_every_run 控制单轮数据保存。
+# 调用时明确传入 preview_only=False，因此目标脚本的预览开关不控制此处。
 def run_endurance(
     *,
     module_name=None,
@@ -181,6 +193,7 @@ def run_endurance(
     }
 
 
+# 按本文件目标模块、参数覆盖和循环次数启动 FTJ endurance，返回汇总结果。
 def main():
     return run_endurance()
 

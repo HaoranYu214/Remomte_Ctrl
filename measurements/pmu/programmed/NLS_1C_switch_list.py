@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：NLS 参数扫描；先改 BASE_PARAMS、Dwell_list、Vsquare_list、INST、通道和 SAVE_DIR。
+# 每个点复制 BASE_PARAMS，再覆盖 Dwell/Vsquare；不使用单次入口的 PARAMS 作为扫描默认值。
+# 流程：run_sweep 遍历组合 → run_nls_switch_test 采集/保存 → 输出汇总工作簿。
+# 文件末尾 PREVIEW_ONLY=True 时仅预览第一个组合；直接调用 run_sweep 会实测。
+
 """Batch parameter sweep for the NLS switch test."""
 
 from pathlib import Path
@@ -54,6 +60,7 @@ Dwell_list = np.logspace(-7, -1, 31)
 Vsquare_list = np.arange(0, 2.0, 0.1)
 
 
+# 只预览 NLS 扫描列表的第一个组合，不连接仪器，也不代表全部扫描点。
 def preview_sweep_waveform(output_path=None):
     """Preview the first configured sweep point without connecting to the PMU."""
     preview_params = BASE_PARAMS.copy()
@@ -67,6 +74,8 @@ def preview_sweep_waveform(output_path=None):
     )
 
 
+# 遍历 Dwell_list × Vsquare_list，通过 PMU 逐点测量并保存结果及汇总。
+# 返回各点结果列表；预览分支由文件末尾的 PREVIEW_ONLY 判断。
 def run_sweep():
     """Run a Dwell x Vsquare sweep and save a summary workbook."""
     for dwell in Dwell_list:

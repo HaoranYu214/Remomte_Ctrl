@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# 阅读入口：铁电电容疲劳测试；先改 params_cycle、params_pv2、params_pund 和 cycle_counts。
+# 仪器、通道、选项和保存位置在 INST、CH1/CH2、SEGARB_OPTIONS、SAVE_DIR。
+# 流程：累计目标转成新增循环数 → 疲劳波形 → PV2/PUND 读回 → 保存原始数据、分析和阶段汇总。
+# PREVIEW_ONLY=True 时只预览三类波形；三组 *_params_override 分别覆盖对应默认参数。
+
 """Triangular fatigue cycles followed by PV2 and triangular PUND readback."""
 
 from pathlib import Path
@@ -80,6 +86,7 @@ SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\
 PREVIEW_ONLY = False
 
 
+# 生成一次不采集数据的双极性三角疲劳波形；等待为零时省略保持段。
 def make_cycle_seq_configs(*, channels=None, parameters=None):
     """Build one unmeasured bipolar triangle; zero delay omits the holds."""
     parameters = params_cycle if parameters is None else parameters
@@ -106,6 +113,7 @@ def make_cycle_seq_configs(*, channels=None, parameters=None):
     }
 
 
+# 将累计循环目标转成每阶段需要新增的循环数，避免把累计值重复执行。
 def build_cycle_schedule(target_counts):
     """Convert cumulative fatigue-cycle milestones into hardware loop counts."""
     schedule, completed = [], 0
@@ -126,6 +134,7 @@ def build_cycle_schedule(target_counts):
     return schedule
 
 
+# 在疲劳波形下发前检查各阶段配置及默认 10 V 源档相关限制；不连接仪器。
 def validate_plan(cycle_parameters, pv2_parameters, pund_parameters, configs):
     """Preflight the default 10 V source range before applying fatigue pulses."""
     for name, parameters in (("cycle", cycle_parameters), ("PV2", pv2_parameters),
@@ -149,6 +158,7 @@ def validate_plan(cycle_parameters, pv2_parameters, pund_parameters, configs):
                     raise ValueError("Each actual 10 V SARB segment must last 20 ns to 1 s (KXCI 7-52).")
 
 
+# 通过已有连接施加指定次数的疲劳波形；不包含后续 PV2/PUND 读回。
 def run_cycle_block(query, n_cycles, *, parameters=None, channels=None, segarb_options=None):
     """Run only fatigue cycles; readback pulses are counted separately."""
     parameters = params_cycle if parameters is None else parameters
@@ -166,6 +176,7 @@ def run_cycle_block(query, n_cycles, *, parameters=None, channels=None, segarb_o
         power_off_outputs(query, channels)
 
 
+# 按给定固定量程执行一次读回并返回双通道数据；分析和保存前关闭输出。
 def acquire_readback(query, seq_configs, current_ranges, *, channels=None, segarb_options=None):
     """Acquire once at fixed ranges and shut down before saving or analysis."""
     channels = tuple(channels) if channels is not None else (CH1, CH2)
@@ -178,24 +189,28 @@ def acquire_readback(query, seq_configs, current_ranges, *, channels=None, segar
         power_off_outputs(query, channels)
 
 
+# 离线预览一个疲劳循环；show 控制显示，output_path 指定时保存图片。
 def preview_cycle_waveform(output_path=None, *, parameters=None, channels=None, show=True):
     channels = tuple(channels) if channels is not None else (CH1, CH2)
     return preview_sequence_configs(make_cycle_seq_configs(parameters=parameters, channels=channels)[channels[0]],
                                     output_path, show=show, title_prefix="Endurance: one fatigue cycle")
 
 
+# 离线预览疲劳测试后的 PV2 读回；show 控制显示，可指定图片路径。
 def preview_pv2_waveform(output_path=None, *, parameters=None, channels=None, show=True):
     channels = tuple(channels) if channels is not None else (CH1, CH2)
     return preview_sequence_configs(make_pv2_seq_configs(parameters=parameters, channels=channels)[channels[0]],
                                     output_path, show=show, title_prefix="Endurance PV2 readback")
 
 
+# 离线预览疲劳测试后的三角 PUND 读回；show 控制显示，可指定图片路径。
 def preview_pund_waveform(output_path=None, *, parameters=None, channels=None, show=True):
     channels = tuple(channels) if channels is not None else (CH1, CH2)
     return preview_sequence_configs(make_pund_seq_configs(parameters=parameters, channels=channels)[channels[0]],
                                     output_path, show=show, title_prefix="Endurance triangular PUND readback")
 
 
+# 生成双通道 PV2 段波形及采集窗口，供预览或下发仪器；本函数不发送命令。
 def make_pv2_seq_configs(*, channels=None, parameters=None):
     """Build PV2 seq_configs directly in this script."""
     parameters = params_pv2 if parameters is None else parameters
@@ -252,6 +267,7 @@ def make_pv2_seq_configs(*, channels=None, parameters=None):
     return {ch1: [ch1_config], ch2: [ch2_config]}
 
 
+# 生成双通道 PUND 段波形及采集窗口，供预览或下发仪器；本函数不发送命令。
 def make_pund_seq_configs(*, channels=None, parameters=None):
     """Build five triangular PUND pulses separated by unmeasured delays."""
     parameters = params_pund if parameters is None else parameters
@@ -332,6 +348,7 @@ def make_pund_seq_configs(*, channels=None, parameters=None):
 
 
 
+# 先保存原始通道、实际波形和参数，保留一份不依赖后续分析成功的数据。
 def save_readback(path, frames, parameters, seq_configs, *, channels, metadata):
     """Checkpoint raw channels, exact waveforms, and all run settings first."""
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
@@ -355,6 +372,7 @@ def save_readback(path, frames, parameters, seq_configs, *, channels, metadata):
         pd.DataFrame(waveform_rows).to_excel(writer, sheet_name="Waveform", index=False)
 
 
+# 向已有原始数据工作簿追加分析表，保留之前保存的测量数据。
 def save_analysis(path, data, readback_name):
     """Append processed tables while retaining the raw checkpoint."""
     sheets = {"Total": data["df_total"]}
@@ -386,6 +404,7 @@ def save_analysis(path, data, readback_name):
         plt.close(fig)
 
 
+# 将各累计循环次数的 PV2/PUND 回线叠加成图并保存，便于比较疲劳变化。
 def save_cycle_overlay(curves, path):
     """Overlay all completed cycles separately for PV2 delay/no-delay and PUND."""
     if not any(curves.values()):
@@ -409,6 +428,9 @@ def save_cycle_overlay(curves, path):
         plt.close(fig)
 
 
+# 合并三组参数覆盖值，按累计循环目标施加疲劳波形，再做 PV2 和三角 PUND 读回。
+# preview_only=True 时只预览；实测逐阶段保存原始数据、分析和汇总，返回路径及汇总表。
+# 读回采用固定量程，不自动重测；读回脉冲不计入疲劳循环数。
 def run_test(cycle_params_override=None, pv2_params_override=None, pund_params_override=None,
              *, cycle_targets=None, channels=None, inst=None, segarb_options=None,
              save_dir=None, preview_only=None):
