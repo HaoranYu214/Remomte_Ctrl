@@ -384,6 +384,7 @@ def main():
     repeated_data = repeated_data.assign(time=run_time)
     workbook_path = Path(f"{summary_stem}.xlsx")
     with pd.ExcelWriter(workbook_path, engine="openpyxl") as writer:
+        writer.book.properties.creator = "ssme / Haoran Yu"
         raw_data.to_excel(writer, sheet_name="All_Raw_Data", index=False)
         metrics.to_excel(writer, sheet_name="Delay_Metrics", index=False)
         ranking.to_excel(writer, sheet_name="Read_Bias_Ranking", index=False)

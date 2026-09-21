@@ -73,3 +73,7 @@ class Communications:
             raise RuntimeError("No instrument connection is open.")
         self._echo(command)
         return self._instrument_object.query(command).rstrip()
+
+#   .-- ssme --.
+#   | tx -> rx |
+#   '-- h.y. --'

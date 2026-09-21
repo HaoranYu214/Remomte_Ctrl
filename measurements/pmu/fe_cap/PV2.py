@@ -353,6 +353,7 @@ def save_pv2_workbook(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+        writer.book.properties.creator = "ssme / Haoran Yu"
         df_ch1.to_excel(writer, sheet_name="Channel_1", index=False)
         df_ch2.to_excel(writer, sheet_name="Channel_2", index=False)
         data["df_total"].to_excel(writer, sheet_name="Total", index=False)

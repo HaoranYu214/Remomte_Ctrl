@@ -483,6 +483,7 @@ def run_test(
         save_raw(raw_path, frames, timing, build_params_table(channels=channels, inst=inst, parameters=parameters, segarb_options=segarb_options))
     data = analyze_pund_triangle_diff(df_ch1, df_ch2, channels=channels, parameters=parameters)
     with pd.ExcelWriter(raw_path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+        writer.book.properties.creator = "ssme / Haoran Yu"
         for label, frame in data.items():
             if isinstance(frame, pd.DataFrame):
                 frame.to_excel(writer, sheet_name=label[:31], index=False)

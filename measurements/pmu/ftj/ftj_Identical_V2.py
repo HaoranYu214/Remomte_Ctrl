@@ -264,6 +264,7 @@ def save_checkpoint(path, rows, frames, params_df):
     try:
         combined = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
         with pd.ExcelWriter(temporary, engine="openpyxl") as writer:
+            writer.book.properties.creator = "ssme / Haoran Yu"
             pd.DataFrame(rows).to_excel(writer, sheet_name="Summary", index=False)
             combined.to_excel(writer, sheet_name="RawCombined", index=False)
             params_df.to_excel(writer, sheet_name="Parameters", index=False)

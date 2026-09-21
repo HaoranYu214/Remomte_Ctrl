@@ -157,6 +157,7 @@ def execute_plan(query, plan, channels, params, options, frames, timing,
 def save_raw(path, frames, timing, parameters):
     """Checkpoint raw data before analysis, including interrupted/failed runs."""
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
+        writer.book.properties.creator = "ssme / Haoran Yu"
         for channel, parts in frames.items():
             if parts:
                 pd.concat(parts, ignore_index=True).to_excel(writer, sheet_name=f"Channel_{channel}", index=False)

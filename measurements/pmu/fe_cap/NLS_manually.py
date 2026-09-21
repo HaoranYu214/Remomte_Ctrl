@@ -192,6 +192,7 @@ def save_nls_results(df_ch1, df_ch2):
 
     if params["MeasureSquare"]:
         with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
+            writer.book.properties.creator = "ssme / Haoran Yu"
             df_ch1.to_excel(writer, sheet_name="Raw_CH1", index=False)
             df_ch2.to_excel(writer, sheet_name="Raw_CH2", index=False)
             build_params_table().to_excel(writer, sheet_name="Parameters", index=False)
@@ -222,6 +223,7 @@ def save_nls_results(df_ch1, df_ch2):
     df_vp_ch2 = process_nls_channel(df_ch2, CH2)
 
     with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
+        writer.book.properties.creator = "ssme / Haoran Yu"
         df_ch1.to_excel(writer, sheet_name="Raw_CH1", index=False)
         df_ch2.to_excel(writer, sheet_name="Raw_CH2", index=False)
         df_vp_ch1.to_excel(writer, sheet_name="VP_CH1", index=False)

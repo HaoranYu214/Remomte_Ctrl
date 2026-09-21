@@ -42,6 +42,8 @@ SMU linear, segmented, logarithmic and explicit paths all produce VL lists. Poin
 
 ### Results and offline checks
 
+Excel workbooks record "ssme / Haoran Yu" in the creator document property. This metadata travels with the workbook; it adds no cells or measurement columns.
+
 Output groups share a reserved stem, for example PV2_03.00V_tr250us_td1000us_r001.xlsx and its plot companions. tr/td/tw are rise/delay/width in microseconds. Labels round voltage to two decimals; full settings remain in parameter sheets. Existing workbooks or companion plots occupy a run number. Keep the .reservations directory with the data; interrupted runs may leave gaps.
 
 Configured output directories are used directly. Progress summaries are updated as one Excel workbook per invocation, using atomic replacement after successful writing. Low-level helpers still honor explicit output paths. PV/PUND polarization figures show I2; raw I1 and its analysis remain saved.
@@ -95,6 +97,8 @@ python measurements/smu/2terminal/example.py
 SMU 的 linear、segments、log、list 都生成 VL 列表。取点算法放在 smu/points.py，CH/VL/VC、时间和量程命令直接写在实验里。PMU 的脉冲序列也保留在各实验文件。PMU 预览横轴是时间，SMU 是点序号；两者都是指令预览。
 
 ### 结果与离线检查
+
+Excel 工作簿在 creator 文档属性中记录 "ssme / Haoran Yu"。署名随文件分享，不增加单元格或测量列。
 
 同次输出共用预留主名，例如 PV2_03.00V_tr250us_td1000us_r001.xlsx 及其配套图片。tr/td/tw 表示上升、等待、脉宽，单位微秒。文件名电压保留两位小数，完整设置保存在参数表。已有表格或配套图片都会占用编号；.reservations 应随数据目录保留，中断可能留下空号。
 

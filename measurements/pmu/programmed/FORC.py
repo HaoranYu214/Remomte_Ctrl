@@ -388,6 +388,7 @@ def save_forc_workbook(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+        writer.book.properties.creator = "ssme / Haoran Yu"
         pd.concat(raw_ch1_frames, ignore_index=True).to_excel(
             writer, sheet_name="Raw_CH1", index=False
         )

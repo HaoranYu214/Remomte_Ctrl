@@ -323,7 +323,10 @@ def install_dry_run_hooks(no_save=False):
     if no_save:
         class DummyExcelWriter:
             def __init__(self, path, *args, **kwargs):
+                from types import SimpleNamespace
+
                 self.path = path
+                self.book = SimpleNamespace(properties=SimpleNamespace(creator=None))
 
             def __enter__(self):
                 print(f"# SKIP_SAVE ExcelWriter -> {self.path}")
