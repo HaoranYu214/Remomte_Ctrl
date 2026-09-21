@@ -31,7 +31,7 @@ STOP_ON_ERROR = True
 SETTLE_TIME_S = 0.5
 
 # Change this one path to relocate all PV2 and PUND outputs.
-BASE_SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L30_2\PV")
+BASE_SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L20_2\PV4_afterIVendurance")
 SAVE_DIRS = {
     "PV2": BASE_SAVE_DIR,
     "PUND_tri": BASE_SAVE_DIR,
@@ -39,9 +39,9 @@ SAVE_DIRS = {
 
 INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
-DEVICE_AREA_CM2 = (30e-4) ** 2
+DEVICE_AREA_CM2 = (20e-4) ** 2
 # DEVICE_AREA_CM2 = (10*1e-4)**2*3.14
-VP_BOTH = 5
+VP_BOTH = -4
 RISE_TIME = 2.5e-4
 OFFSET_BOTH = 0
 
@@ -55,8 +55,8 @@ PV2_PARAMS = {
     "Vp": VP_BOTH,
     "offset": OFFSET_BOTH,
     "area_cm2": DEVICE_AREA_CM2,
-    "Irange1": 0.0001,
-    "Irange2": 1e-05,
+    "Irange1": 1e-05,
+    "Irange2": 1e-06,
 }
 
 PUND_PARAMS = {
@@ -67,7 +67,7 @@ PUND_PARAMS = {
     "offset": OFFSET_BOTH,
     "area_cm2": DEVICE_AREA_CM2,
     "Irange1": 1e-05,
-    "Irange2": 1e-05,
+    "Irange2": 1e-06,
 }
 
 SEGARB_OPTIONS = {

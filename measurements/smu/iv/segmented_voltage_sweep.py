@@ -40,16 +40,17 @@ SMU_CONNECTIONS = {
 }
 
 
-SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L30_3")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L20_2\IV5_endurance")
 
-DEVICE_AREA_CM2 = (30e-4) ** 2
+DEVICE_AREA_CM2 = (20e-4) ** 2
 # DEVICE_AREA_CM2 = (15*1e-4)**2*3.14
 
 # Generic device-check loop. Package/orchestration files may override these
 # globals before calling ``main()`` without duplicating the SMU implementation.
-POSITIVE_PEAK_V = 6
-NEGATIVE_PEAK_V = -6
+POSITIVE_PEAK_V = 5
+NEGATIVE_PEAK_V = -5
 TURNING_POINTS = [0.0, POSITIVE_PEAK_V, 0.0, NEGATIVE_PEAK_V, 0.0]
+# TURNING_POINTS = [0.0, NEGATIVE_PEAK_V, 0.0, POSITIVE_PEAK_V, 0.0]
 SEGMENT_STEP = 0.1
 
 PARAMS = {
@@ -61,7 +62,7 @@ PARAMS = {
     "hold_time": 0.0,
     "sweep_delay": 0.02,
     # IT1=Fast, IT2=Normal, IT3=Quiet.
-    "integration": "IT2",
+    "integration": "IT3",
     # None: no overall test deadline; keep polling SP until KXCI completes.
     # Long endurance runs may legitimately take hours or days. Use a positive
     # number only when an explicit wall-clock limit is wanted; "auto" remains
@@ -79,11 +80,13 @@ NAMES = {
 }
 
 
-def preview_waveform(output_path=None, *, show=True, title=None):
+def preview_waveform(output_path=None, *, show=True, title=None, turning_points=None, segment_step=None):
     """Show the exact segmented voltage list, or save it when requested."""
     import matplotlib.pyplot as plt
 
-    sweep_values = build_segmented_voltage_path(TURNING_POINTS, SEGMENT_STEP)
+    turning_points = TURNING_POINTS if turning_points is None else turning_points
+    segment_step = SEGMENT_STEP if segment_step is None else segment_step
+    sweep_values = build_segmented_voltage_path(turning_points, segment_step)
     figure, axis = plt.subplots(figsize=(9, 4.5))
     axis.plot(range(len(sweep_values)), sweep_values, linewidth=1.4)
     figure_title = title or (
@@ -109,32 +112,51 @@ def preview_waveform(output_path=None, *, show=True, title=None):
     return output_path
 
 
-def main():
-    """Run the segmented list sweep and save measured plus commanded values."""
-    sweep_values = build_segmented_voltage_path(TURNING_POINTS, SEGMENT_STEP)
+def run_test(params_override=None, *, turning_points=None, segment_step=None,
+             save_dir=None, file_stem="IV", inst=None, device_area_cm2=None,
+             sweep_channel=None, bias_channel=None, available_channels=None,
+             smu_connections=None, names=None):
+    """Run one complete list sweep using explicit overrides without changing defaults."""
+    parameters = dict(PARAMS)
+    if params_override is not None:
+        unknown = set(params_override) - set(parameters)
+        if unknown:
+            raise ValueError(f"Unknown segmented IV parameters: {sorted(unknown)}")
+        parameters.update(params_override)
+    inst = INST if inst is None else inst
+    save_dir = SAVE_DIR if save_dir is None else Path(save_dir)
+    device_area_cm2 = DEVICE_AREA_CM2 if device_area_cm2 is None else device_area_cm2
+    sweep_channel = SWEEP_CHANNEL if sweep_channel is None else sweep_channel
+    bias_channel = BIAS_CHANNEL if bias_channel is None else bias_channel
+    available_channels = AVAILABLE_CHANNELS if available_channels is None else available_channels
+    smu_connections = dict(SMU_CONNECTIONS if smu_connections is None else smu_connections)
+    names = dict(NAMES if names is None else names)
+    turning_points = list(TURNING_POINTS if turning_points is None else turning_points)
+    segment_step = SEGMENT_STEP if segment_step is None else segment_step
+    sweep_values = build_segmented_voltage_path(turning_points, segment_step)
     if len(sweep_values) > 4096:
         raise ValueError(
             f"Segmented sweep contains {len(sweep_values)} points; "
             "KXCI VL list sweeps are limited to 4096."
         )
     print(
-        f"Segmented sweep: {TURNING_POINTS}, "
+        f"Segmented sweep: {turning_points}, "
         f"{len(sweep_values)} commanded points."
     )
 
-    with SMUSession(INST) as session:
+    with SMUSession(inst) as session:
         variables = run_list_voltage_sweep(
             session.query,
             values=sweep_values,
-            sweep_channel=SWEEP_CHANNEL,
-            bias_channel=BIAS_CHANNEL,
-            sweep_voltage_name=NAMES["sweep_voltage"],
-            sweep_current_name=NAMES["sweep_current"],
-            bias_voltage_name=NAMES["bias_voltage"],
-            bias_current_name=NAMES["bias_current"],
-            available_channels=AVAILABLE_CHANNELS,
-            smu_connections=SMU_CONNECTIONS,
-            **PARAMS,
+            sweep_channel=sweep_channel,
+            bias_channel=bias_channel,
+            sweep_voltage_name=names["sweep_voltage"],
+            sweep_current_name=names["sweep_current"],
+            bias_voltage_name=names["bias_voltage"],
+            bias_current_name=names["bias_current"],
+            available_channels=available_channels,
+            smu_connections=smu_connections,
+            **parameters,
         )
         data = retrieve_variables(
             session.query,
@@ -151,22 +173,26 @@ def main():
         }
     )
     data = pd.concat([commanded, data.reset_index(drop=True)], axis=1)
-    plot_data = build_plot_data(data, area_cm2=DEVICE_AREA_CM2)
+    plot_data = build_plot_data(
+        data, area_cm2=device_area_cm2,
+        channel1_voltage=names["sweep_voltage"], channel1_current=names["sweep_current"],
+        channel2_voltage=names["bias_voltage"], channel2_current=names["bias_current"],
+    )
 
-    output_stem = reserve_output_stem(SAVE_DIR, measurement_name("IV", max(abs(value) for value in TURNING_POINTS)))
+    output_stem = reserve_output_stem(save_dir, measurement_name(file_stem, max(abs(value) for value in turning_points)))
     output_path = Path(f"{output_stem}.xlsx")
     saved_parameters = {
-        "INST": INST,
-        "DEVICE_AREA_CM2": DEVICE_AREA_CM2,
-        "SWEEP_CHANNEL": SWEEP_CHANNEL,
-        "BIAS_CHANNEL": BIAS_CHANNEL,
-        "AVAILABLE_CHANNELS": AVAILABLE_CHANNELS,
-        "SMU_CONNECTIONS": SMU_CONNECTIONS,
-        "TURNING_POINTS": TURNING_POINTS,
-        "SEGMENT_STEP": SEGMENT_STEP,
+        "INST": inst,
+        "DEVICE_AREA_CM2": device_area_cm2,
+        "SWEEP_CHANNEL": sweep_channel,
+        "BIAS_CHANNEL": bias_channel,
+        "AVAILABLE_CHANNELS": available_channels,
+        "SMU_CONNECTIONS": smu_connections,
+        "TURNING_POINTS": turning_points,
+        "SEGMENT_STEP": segment_step,
         "POINT_COUNT": len(sweep_values),
-        **NAMES,
-        **PARAMS,
+        **names,
+        **parameters,
     }
     save_workbook(
         output_path,
@@ -178,8 +204,8 @@ def main():
         jv_path, log_path = save_current_density_plots(
             plot_data,
             output_path,
-            voltage_column=NAMES["sweep_voltage"],
-            current_density_column=NAMES["sweep_current_density"],
+            voltage_column="V1",
+            current_density_column="J1_A_per_cm2",
         )
         print(f"Saved J-V plot: {jv_path.resolve()}")
         print(f"Saved log(abs(J)) plot: {log_path.resolve()}")
@@ -192,6 +218,11 @@ def main():
         "log_plot_path": log_path if "log_path" in locals() else None,
         "point_count": len(sweep_values),
     }
+
+
+def main():
+    """Keep the standalone and existing workflow entry point."""
+    return run_test()
 
 
 if __name__ == "__main__":

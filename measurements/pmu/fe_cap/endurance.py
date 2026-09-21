@@ -28,9 +28,9 @@ from keithley4200.pmu.session import PMUSession
 
 INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
-DEVICE_AREA_CM2 = (30e-4) ** 2
+DEVICE_AREA_CM2 = (20e-4) ** 2
 # DEVICE_AREA_CM2 = (10*1e-4)**2*3.14
-VP_SWEEP = 5
+VP_SWEEP = 4
 RISE_TIME = 2.5e-4
 DELAY_TIME = 1e-3
 
@@ -73,7 +73,7 @@ SEGARB_OPTIONS = {
 
 # These are cumulative readback milestones, not per-step cycle increments.
 cycle_counts = [1, 10, 100, 1000, 1e4, 1e5, 1e6]
-SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L30_2\Endurance6V")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L20_2\4V_Endurance")
 
 
 # Preview all three waveforms first; set False for acquisition.

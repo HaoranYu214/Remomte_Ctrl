@@ -39,7 +39,7 @@ params = dict(
     # area_cm2=(10*1e-4)**2*3.14,
     area_cm2=(20*1e-4)**2,
     Irange1=1e-05,
-    Irange2=1e-05,
+    Irange2=1e-06,
 )
 SEGARB_OPTIONS = {
     "ENABLE_CONNECTION_COMP": False,

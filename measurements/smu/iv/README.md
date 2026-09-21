@@ -46,6 +46,10 @@ as `1e-2` and `1e-1` A/cm² rather than their numerical log10 exponents.
 
 Parameter source: [manual limits and mode reference (Chinese)](../../../reference/manuals/PARAMETER_LIMITS.md).
 
+### IV endurance
+
+[iv_endurance.py](iv_endurance.py) repeats the full segmented_voltage_sweep path LOOP_COUNT times. Edit TURNING_POINTS, SEGMENT_STEP, PARAMS, DEVICE_AREA_CM2, and SAVE_DIR at the top; initial values are copied from the standalone segmented script. PREVIEW_ONLY=True shows one path without connecting or saving; set it to False for acquisition. Each run saves Raw/PlotData/Parameters plus both current-density plots under a run-numbered filename. One Excel summary is updated after every attempt, including failures/interruption, without output paths. Errors stop subsequent runs. Each list remains limited to 4096 points; loops are separate acquisitions with transfer/save/reconnection gaps. INTER_RUN_DELAY_S adds an optional host sleep between completed runs. Workflow callers can use run_endurance(loop_count=..., params_override=..., turning_points=..., save_dir=..., preview_only=False). The standalone segmented entry now also accepts explicit run_test overrides; main() remains compatible.
+
 ## 中文
 
 ### SMU I-V 实验
@@ -72,3 +76,7 @@ DEVICE_AREA_CM2 为器件面积。原始电流单位 A，电流密度 J=I/DEVICE
 [segmented_voltage_sweep_Memristor.py](segmented_voltage_sweep_Memristor.py) 逐次改变正峰值，配合固定负峰值。POSITIVE_PEAK_STEP 决定峰值之间的变化，SEGMENT_STEP 决定每段内的采样步长。最终展开列表每次最多 4096 点。
 
 参数依据：[手册限制与模式速查](../../../reference/manuals/PARAMETER_LIMITS.md)。
+
+### IV endurance
+
+[iv_endurance.py](iv_endurance.py) 将 segmented_voltage_sweep 的完整路径重复 LOOP_COUNT 次。顶部 TURNING_POINTS、SEGMENT_STEP、PARAMS、DEVICE_AREA_CM2、SAVE_DIR 初始复制独立 segmented 文件的配置，可在本文件单独修改。PREVIEW_ONLY=True 只预览一轮、不连接或保存，改为 False 实测。每轮分别保存 Raw/PlotData/Parameters 和两张电流密度图，文件名带轮次；每次尝试后更新同一份 Excel 汇总，失败或中断也记录，不保存路径列。失败停止后续轮次。每轮最多 4096 点，轮次间包含传输、保存和重新连接的停顿；INTER_RUN_DELAY_S 是额外的软件等待。workflow 可调用 run_endurance(loop_count=..., params_override=..., turning_points=..., save_dir=..., preview_only=False)。独立 segmented 另提供显式传参的 run_test，原 main() 保持兼容。

@@ -30,18 +30,18 @@ INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
 params = dict(
     rise_time=2.5e-4,
-    delay_time=1e-3,
+    delay_time=0.9,
     Vp=4.5,
     offset=0,
     # area_cm2=(10*1e-4)**2*3.14,
     # area_cm2=4e-6,
     area_cm2=(30*1e-4)**2,
     Irange1=1e-05,
-    Irange2=1e-05,
+    Irange2=1e-06,
 )
 SEGARB_OPTIONS = {
     "ENABLE_CONNECTION_COMP": False,
-    "ENABLE_LOAD_CONFIG": False,
+    "ENABLE_LOAD_CONFIG": True,
     "LOAD_RESISTANCE": 1e6,
     "ENABLE_LLEC": False,
 }
