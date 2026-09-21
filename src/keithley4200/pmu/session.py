@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Helpers for PMU test sessions.
 
 This module centralizes the repetitive instrument lifecycle used by the

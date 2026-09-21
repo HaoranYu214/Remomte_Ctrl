@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """SARB command precision and companion-waveform alignment regressions."""
 from copy import deepcopy
 from pathlib import Path

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Single summary checkpoints and signed zero-voltage remanence."""
 from pathlib import Path
 import sys

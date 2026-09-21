@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：先 PV2 后三角 PUND；先改本文件 PV2_PARAMS、PUND_PARAMS、INST 和 BASE_SAVE_DIR。
-# 本文件参数覆盖单次测量默认值；VP_BOTH/RISE_TIME/OFFSET_BOTH 等用于构造这两组配置。
-# 流程：main → 按 PREVIEW_ONLY 预览或实测 → 顺序调用两次 run_test 并分别保存。
-# 直接调用 run_pv_and_pund 会实测；preview_pv_and_pund 用于离线预览。
+# Start here: PV2 followed by triangular PUND; edit PV2_PARAMS, PUND_PARAMS, INST and BASE_SAVE_DIR.
+# Workflow parameters override standalone defaults; VP_BOTH/RISE_TIME/OFFSET_BOTH build both configurations.
+# Flow: main -> preview or acquire via PREVIEW_ONLY -> two sequential run_test calls with separate outputs.
+# Calling run_pv_and_pund acquires data; use preview_pv_and_pund for offline preview.
 
 """One-click baseline workflow: run one PV2, then one triangular PUND."""
 
@@ -37,13 +38,13 @@ STOP_ON_ERROR = True
 SETTLE_TIME_S = 0.5
 
 # Change this one path to relocate all PV2 and PUND outputs.
-BASE_SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L20_2\PV4_afterIVendurance")
+BASE_SAVE_DIR = Path("data/workflows/pv_and_pund")
 SAVE_DIRS = {
     "PV2": BASE_SAVE_DIR,
     "PUND_tri": BASE_SAVE_DIR,
 }
 
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 CH1, CH2 = 1, 2
 DEVICE_AREA_CM2 = (20e-4) ** 2
 # DEVICE_AREA_CM2 = (10*1e-4)**2*3.14
@@ -87,7 +88,7 @@ SEGARB_OPTIONS = {
 # WORKFLOW
 # =============================================================================
 
-# 加载 PV2 和三角 PUND 模块并返回字典；导入本身不打开仪器连接。
+# Load PV2 and triangular PUND modules into a dictionary without opening an instrument connection.
 def load_measurements():
     """Load the maintained PV2 and PUND measurement modules without VISA I/O."""
     return {
@@ -96,8 +97,8 @@ def load_measurements():
     }
 
 
-# 按传入参数或本文件配置先测 PV2、再测三角 PUND，分别保存结果并返回结果字典。
-# 此函数执行实测；离线预览应调用 preview_pv_and_pund，或由 main 按 PREVIEW_ONLY 分流。
+# Run PV2 then triangular PUND using supplied or local settings; save separately and return both results.
+# This function acquires data; use preview_pv_and_pund or main's PREVIEW_ONLY branch for offline preview.
 def run_pv_and_pund(
     *,
     inst=INST,
@@ -154,7 +155,7 @@ def run_pv_and_pund(
     return results
 
 
-# 按工作流参数离线生成 PV2 和三角 PUND 预览，返回预览结果；不保存图片。
+# Build and return PV2/PUND previews from workflow settings without saving images.
 def preview_pv_and_pund(
     *,
     inst=INST,
@@ -195,7 +196,7 @@ def preview_pv_and_pund(
     return results
 
 
-# 根据 PREVIEW_ONLY 选择 PV2/PUND 的离线预览或顺序实测，返回对应结果。
+# Use PREVIEW_ONLY to select offline preview or sequential PV2/PUND acquisition.
 def main():
     if PREVIEW_ONLY:
         return preview_pv_and_pund()

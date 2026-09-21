@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：PV2/PUND map；先改 VP_VALUES、FREQUENCY_VALUES_HZ、DELAY_TIME_VALUES_S。
-# 每点从 PV2_BASE_PARAMS/PUND_BASE_PARAMS 复制配置，再填入电压、频率对应斜坡时间和延迟。
-# 仪器/通道/输出位置在 INST、CH1/CH2 和 SAVE_ROOT；RUN_PV2/RUN_PUND_TRI 选择启用的测试。
-# 流程：run_map → 遍历全部组合 → run_one_test → 保存各点结果并逐次更新汇总。
-# 本文件没有 PREVIEW_ONLY 开关，直接运行会实测。
+# Start here: PV2/PUND map; edit VP_VALUES, FREQUENCY_VALUES_HZ and DELAY_TIME_VALUES_S.
+# Copy PV2_BASE_PARAMS/PUND_BASE_PARAMS for each point, then set voltage, frequency-derived ramp time and delay.
+# Set INST, CH1/CH2 and SAVE_ROOT; RUN_PV2/RUN_PUND_TRI select the enabled tests.
+# Flow: run_map -> all combinations -> run_one_test -> save each result and update the summary.
+# This file has no PREVIEW_ONLY switch; running it starts acquisition.
 
 """Map PV2 and triangular-PUND responses over voltage, frequency, and delay."""
 
@@ -37,7 +38,7 @@ from measurements.pmu.fe_cap import PUND_tri, PV2
 # USER CONFIGURATION
 # =============================================================================
 
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 CH1, CH2 = 1, 2
 
 RUN_PV2 = True
@@ -52,7 +53,7 @@ SEGARB_OPTIONS = {
     "ENABLE_LLEC": False,
 }
 
-SAVE_ROOT = Path(r"C:\Users\P317151\Documents\data\10-09-2026\04A1_2700_1200_300\L20_2\Delay_map")
+SAVE_ROOT = Path("data/workflows/pv2_pund_map")
 SAVE_DIRS = {
     "PV2": SAVE_ROOT / "PV2",
     "PUND_tri": SAVE_ROOT / "PUND_tri",
@@ -94,7 +95,7 @@ DELAY_TIME_VALUES_S = [0.9, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6]
 
 
 
-# 将完整三角周期频率换算成单个斜坡时长（1 / 4f），单位为秒。
+# Convert full triangular-cycle frequency to one ramp duration, 1/(4f), in seconds.
 def frequency_to_rise_time(frequency_hz):
     """Convert full 0,+V,-V,0 triangle frequency to one ramp duration."""
     if frequency_hz <= 0:
@@ -102,7 +103,7 @@ def frequency_to_rise_time(frequency_hz):
     return 1.0 / (4.0 * frequency_hz)
 
 
-# 复制基础参数并填入当前电压、频率对应斜坡时间和延迟，返回本点参数。
+# Copy base settings and fill in this point's voltage, frequency-derived ramp time and delay.
 def make_parameters(base_params, vp, frequency_hz, delay_time_s):
     """Build the complete parameter dictionary for one map point."""
     effective_params = dict(base_params)
@@ -112,7 +113,7 @@ def make_parameters(base_params, vp, frequency_hz, delay_time_s):
     return effective_params
 
 
-# 按一个 map 点的完整配置调用实验入口，保存测量结果并返回含状态/错误的汇总行。
+# Run one map point with its complete settings, save the result and return a status/error summary row.
 def run_one_test(
     module,
     test_name,
@@ -184,8 +185,8 @@ def run_one_test(
     }
 
 
-# 遍历电压 × 频率 × 延迟组合，执行启用的 PV2/PUND 并逐次更新汇总工作簿。
-# 返回汇总 DataFrame；此函数会实测，不提供 PREVIEW_ONLY 分支。
+# Iterate voltage x frequency x delay combinations, run enabled tests and checkpoint the summary workbook.
+# Return a summary DataFrame; this function acquires data and has no PREVIEW_ONLY branch.
 def run_map():
     """Run the configured Cartesian map and update one summary workbook."""
     SAVE_ROOT.mkdir(parents=True, exist_ok=True)

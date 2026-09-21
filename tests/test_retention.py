@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Offline checks for explicitly split retention protocols."""
 import os
 os.environ.setdefault("MPLBACKEND", "Agg")

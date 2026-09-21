@@ -1,52 +1,41 @@
-# Multi-step measurement workflows
+# Measurement workflows
 
 [English](#english) | [中文](#中文)
 
 ## English
 
-| File | Execution plan |
+Workflows define batch settings and call the experiment entries. Keep waveforms in their owning experiments.
+
+| Entry | Plan |
 |---|---|
-| [pv_and_pund.py](pv_and_pund.py) | Runs PV2 followed by triangular PUND; supports repeated calls |
-| [pv2_pund_map.py](pv2_pund_map.py) | Sweeps combinations of amplitude, triangular-wave frequency, and delay |
-| [package1.py](package1.py) | Uses RUN_ORDER to combine PV/PUND, a parameter map, and segmented SMU I-V |
-| [ftj_package1.py](ftj_package1.py) | Configures and runs RV2/PWM/Identical/MRD in RUN_ORDER |
+| [pv_and_pund.py](pv_and_pund.py) | PV2 followed by triangular PUND |
+| [pv2_pund_map.py](pv2_pund_map.py) | Amplitude × triangular frequency × delay |
+| [FEcap_package1.py](FEcap_package1.py) | RUN_ORDER combines PV/PUND, parameter mapping and segmented SMU I-V |
+| [ftj_package1.py](ftj_package1.py) | RUN_ORDER combines RV2/PWM/Identical/MRD |
 
-Workflow parameter tables override the corresponding lower-level entry settings, so edit these tables first for batch measurements. STOP_ON_ERROR=True stops later stages after an error; False allows the workflow to continue and record failures. SETTLE_TIME_S is a Python wait between stages, not an instrument pulse delay.
+Edit workflow tables for batch runs. STOP_ON_ERROR controls whether later stages run after failure; SETTLE_TIME_S adds a host wait between stages, not a pulse segment.
 
-Preview selection: `pv_and_pund.py`, `package1.py`, and `ftj_package1.py` check `PREVIEW_ONLY` in `main`. Their `run_*` functions execute measurements directly. `pv2_pund_map.py` has no preview switch and runs measurements when launched. Accepted PV/PUND current ranges may be written back to both the measurement and active workflow settings; other experimental overrides are not persisted this way.
+pv_and_pund, FEcap_package1 and ftj_package1 check PREVIEW_ONLY in main; their run_* functions acquire directly. pv2_pund_map has no preview switch. The FEcap I-V stage explicitly requests acquisition even if the standalone segmented script is set to preview.
 
-The map converts frequency to rise_time=1/(4f). This describes the nominal triangular-wave frequency only; delay and conditioning segments increase the actual total duration. All expanded segments must still respect the manual's timing limits.
+The map uses rise_time=1/(4f); added delays/conditioning increase total duration beyond the nominal triangular period. Accepted PV/PUND ranges can be written back to the active workflow and leaf defaults; other overrides are not persisted this way. See the [parameter API](../pmu/README.md#standalone-and-workflow-configuration).
 
-Outputs use configured directories and summaries include time. r001/r002 identifies output groups sharing the same base name. Boolean RUN_* and PREVIEW_ONLY parameters are switches, distinct from instrument mode codes.
-
-Parameter source: [manual limits and mode reference (Chinese)](../../reference/manuals/PARAMETER_LIMITS.md).
-
-
-Parameter API: [standalone and workflow configuration](../pmu/README.md#standalone-and-workflow-configuration).
-
-Summary output uses one Excel workbook per invocation, updated as progress is recorded. No duplicate live CSV or output-path columns are saved; runtime return values can still provide paths to callers.
+Each invocation reserves its own Excel summary and updates it after stages and at completion. It records status/time without duplicate CSV or output-path columns; return values may still contain paths. Run numbers distinguish output groups. Workflows require the source checkout, including measurements.
 
 ## 中文
 
-### 多步测量工作流
+工作流定义批量配置并调用实验入口，波形仍保留在所属实验中。
 
-| 文件 | 执行内容 |
+| 入口 | 执行计划 |
 |---|---|
-| [pv_and_pund.py](pv_and_pund.py) | 顺序执行 PV2 和三角 PUND，可重复调用 |
-| [pv2_pund_map.py](pv2_pund_map.py) | 扫描幅值、三角波频率和 delay 的组合 |
-| [package1.py](package1.py) | 按 RUN_ORDER 串联 PV/PUND、map 和 SMU 分段 I-V |
-| [ftj_package1.py](ftj_package1.py) | 按 RUN_ORDER 配置并运行 RV2/PWM/Identical/MRD |
+| [pv_and_pund.py](pv_and_pund.py) | PV2 后执行三角 PUND |
+| [pv2_pund_map.py](pv2_pund_map.py) | 幅值 × 三角频率 × 等待时间 |
+| [FEcap_package1.py](FEcap_package1.py) | RUN_ORDER 组合 PV/PUND、参数扫描、分段 SMU I-V |
+| [ftj_package1.py](ftj_package1.py) | RUN_ORDER 组合 RV2/PWM/Identical/MRD |
 
-工作流自己的参数表会覆盖下层入口的相应设置；批量测量时优先改这里的配置。STOP_ON_ERROR=True 表示遇到错误停止后续阶段，False 表示允许按流程继续并记录失败。SETTLE_TIME_S 是 Python 阶段间等待，不是仪器脉冲延迟。
+批量运行时修改工作流参数表。STOP_ON_ERROR 控制失败后是否继续后续阶段；SETTLE_TIME_S 是阶段间的软件等待，不是脉冲段。
 
-预览入口：`pv_and_pund.py`、`package1.py` 和 `ftj_package1.py` 由 `main` 检查 `PREVIEW_ONLY`；直接调用它们的 `run_*` 函数会实测。`pv2_pund_map.py` 没有预览开关，直接运行会实测。PV/PUND 接受的电流量程可能回写独立测量及当前 workflow 设置；其他实验覆盖参数不按这种方式回写。
+pv_and_pund、FEcap_package1、ftj_package1 在 main 检查 PREVIEW_ONLY，run_* 函数直接实测。pv2_pund_map 没有预览开关。FEcap 的 I-V 阶段明确请求实测，不受独立分段脚本预览默认值影响。
 
-map 中 frequency 转换为 rise_time=1/(4f)，仅表示三角波的标称频率；delay 和其他预处理段会增加实际总时间。所有展开后的真实时间段仍受手册边界约束。
+参数图使用 rise_time=1/(4f)，附加等待和预处理使总时长超过名义三角周期。接受的 PV/PUND 量程可以回写当前工作流及底层入口默认值；其他覆盖参数不会这样持久化。详见[参数接口](../pmu/README.md#独立运行与工作流配置)。
 
-保存按配置目录执行，汇总表含 time；r001/r002 是同名输出组编号。RUN_*、PREVIEW_ONLY 等布尔值在参数表中表示开关，不能和仪器模式码混为一谈。
-
-参数依据：[手册限制与模式速查](../../reference/manuals/PARAMETER_LIMITS.md)。
-
-参数接口：[独立运行与工作流配置](../pmu/README.md#独立运行与工作流配置)。
-
-每轮只保存一份 Excel 汇总，随进度更新，不再保存重复的实时 CSV 或输出路径列；函数返回值仍可向调用方提供运行时路径。
+每次调用预留自己的 Excel 汇总表，在各阶段后和结束时更新；记录状态、时间，不再重复输出 CSV 或路径列，函数返回值仍可包含路径。运行编号区分输出组。工作流需要包含 measurements 的源码仓库。

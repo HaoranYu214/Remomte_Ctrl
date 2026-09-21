@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：FTJ 全套；在本文件改 FTJ_TESTS、RUN_ORDER、INST、通道和 BASE_SAVE_DIR。
-# FTJ_TESTS 各阶段 params/current_ranges 为本套测试的配置；无需同步修改单次入口默认参数。
-# 流程：main → 按 PREVIEW_ONLY 预览或实测 → 按 RUN_ORDER 执行并分别保存。
-# run_package 直接实测；辅助函数 load_test_modules 只加载模块。
+# Start here: full FTJ workflow; edit FTJ_TESTS, RUN_ORDER, INST, channels and BASE_SAVE_DIR.
+# Each FTJ_TESTS stage owns its params/current_ranges; standalone defaults need not be changed.
+# Flow: main -> preview or acquire via PREVIEW_ONLY -> execute RUN_ORDER and save each stage.
+# run_package acquires data; load_test_modules only imports the required modules.
 
 """One-file workflow for the standard FTJ characterization package.
 
@@ -41,10 +42,10 @@ STOP_ON_ERROR = True
 STAGE_SETTLE_TIME_S = 0.0
 
 BASE_SAVE_DIR = Path(
-    r"C:\Users\P317151\Documents\data\06-07-2026\03C6\L40um6\FTJ_package1"
+    "data/workflows/ftj_package1"
 )
 
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 CH1, CH2 = 1, 2
 
 COMMON_SEGARB_OPTIONS = {
@@ -169,7 +170,7 @@ FTJ_TESTS = {
 # ORCHESTRATION (normally no edits are needed below this line)
 # =============================================================================
 
-# 加载工作流依赖的实验模块并返回名称到模块的字典；不连接仪器。
+# Load experiment modules and return a name-to-module mapping without connecting to hardware.
 def load_test_modules():
     """Import the maintained FTJ measurements without opening VISA."""
     return {
@@ -178,7 +179,7 @@ def load_test_modules():
     }
 
 
-# 检查 RUN_ORDER 的阶段名存在且不重复；不连接仪器。
+# Check that RUN_ORDER contains known, distinct stage names; no hardware access.
 def validate_package_config():
     unknown = [test_name for test_name in RUN_ORDER if test_name not in FTJ_TESTS]
     if unknown:
@@ -187,8 +188,8 @@ def validate_package_config():
         raise ValueError("RUN_ORDER must not contain duplicate FTJ stages.")
 
 
-# 按 RUN_ORDER 实测 FTJ_TESTS 中的各阶段并保存，返回按阶段名组织的结果字典。
-# 本函数强制子入口实测；预览由 main 的 PREVIEW_ONLY 分支调用 preview_package。
+# Acquire and save FTJ_TESTS stages in RUN_ORDER; return results keyed by stage name.
+# Force acquisition in child entries; main handles offline preview through preview_package.
 def run_package(*, modules=None):
     """Run all enabled FTJ stages in order."""
     validate_package_config()
@@ -221,7 +222,7 @@ def run_package(*, modules=None):
     return results
 
 
-# 按工作流配置生成各阶段的预览并统一显示，返回预览结果；不连接仪器。
+# Build all stage previews from workflow settings and display them together without hardware access.
 def preview_package(*, modules=None, show=True):
     """Build labeled previews for every stage and display them together."""
     import matplotlib.pyplot as plt
@@ -244,7 +245,7 @@ def preview_package(*, modules=None, show=True):
     return figures
 
 
-# 根据 PREVIEW_ONLY 选择整套 FTJ 的离线预览或实测，返回对应结果。
+# Use PREVIEW_ONLY to select offline preview or acquisition for the FTJ package.
 def main():
     if PREVIEW_ONLY:
         return preview_package()

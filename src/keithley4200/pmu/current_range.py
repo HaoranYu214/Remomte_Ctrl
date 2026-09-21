@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Reusable PMU fixed-current-range assessment and automatic retry helpers."""
 
 from __future__ import annotations

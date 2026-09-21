@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 # PMU data-processing helpers.
 """
 PMU buffer reading, saving, channel merging, and analysis.
@@ -380,33 +381,6 @@ def print_data_summary(df):
 
 
 # === Synthetic data ===
-
-def generate_mock_dual(n_points=2000, duration=1e-3):
-    """Generate synthetic two-channel data for offline examples."""
-    def triangle_wave(t, cycles=4, duration=1e-3, amp=5.0):
-        phase = (cycles * t / duration) % 1.0
-        tri01 = 2.0*np.abs(phase - 0.5)
-        return (1 - 2*tri01) * amp
-
-    t = np.linspace(0, duration, n_points)
-    cycles = 4
-    v1 = triangle_wave(t, cycles=cycles, duration=duration, amp=5.0)
-    v2 = triangle_wave((t + duration/(4*cycles)) % duration, cycles=cycles, duration=duration, amp=2.5)
-
-    shift = int(n_points/(4*cycles))
-    t_shift = np.roll(t, shift)
-    exp_scale = (np.exp(np.linspace(0, 12, n_points)) - 1) / (np.e**12 - 1)
-    env = 1e-12 + exp_scale * (1e-3 - 1e-12)
-    i1 = env * np.sin(2*np.pi*cycles * t_shift / duration)
-    i2 = env[::-1] * np.cos(2*np.pi*cycles * t_shift / duration)
-
-    s1 = np.zeros(n_points, dtype=int)
-    s2 = np.zeros(n_points, dtype=int)
-    return pd.DataFrame({
-        "Voltage 1": v1, "Current 1": i1, "Timestamp 1": t, "Status 1": s1,
-        "Voltage 2": v2, "Current 2": i2, "Timestamp 2": t, "Status 2": s2,
-    })
-
 
 def remanent_polarization(voltage, polarization, *, zero_endpoint=False):
     """Return signed (Pr_positive, Pr_negative) at zero applied voltage.

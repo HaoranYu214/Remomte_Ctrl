@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：PUND_Squr；先改 INST、CH1/CH2、params、SEGARB_OPTIONS 和 SAVE_DIR。
-# 流程：run_test 合并参数 → 生成波形 → 采集/量程检查 → 分析极化 → 保存工作簿和图片。
-# PREVIEW_ONLY=True 时只预览；调用 run_test 时 params_override 覆盖同名默认参数。
-# 波形在 make_pund_seq_configs 中定义；分析函数处理已读出的数据，不连接仪器。
-# 实测接受的 Irange1/Irange2 会回写默认量程；电压、时序等其他覆盖值不回写。
+# Start here: PUND_Squr; edit INST, CH1/CH2, params, SEGARB_OPTIONS and SAVE_DIR.
+# Flow: run_test merges settings -> waveform generation -> acquisition/range checks -> polarization analysis -> workbook/plots.
+# PREVIEW_ONLY=True previews only; params_override replaces matching defaults in run_test.
+# make_pund_seq_configs defines waveforms; analysis functions process acquired data without hardware access.
+# Accepted Irange1/Irange2 values are persisted; voltage, timing and other overrides are not written back.
 
 """PUND segARB test with direct sequence definitions."""
 
@@ -24,7 +25,7 @@ for path in (SRC_ROOT, REPO_ROOT):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from keithley4200.tools.waveform_preview import preview_sequence_configs
+from keithley4200.pmu.preview import preview_sequence_configs
 from keithley4200.output import measurement_name, reserve_output_stem, time_tag, saved_at
 from keithley4200.pmu.current_range import acquire_with_auto_current_range
 from keithley4200.pmu.data_processing import calculate_polarization, read_both_channels
@@ -33,7 +34,7 @@ from keithley4200.pmu.session import PMUSession
 from keithley4200.measurement_parameters import merge_parameters, remap_channel_options
 from keithley4200.parameter_defaults import remember_current_ranges
 
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 CH1, CH2 = 1, 2
 params = dict(
     rise_time=1e-5,
@@ -54,11 +55,11 @@ SEGARB_OPTIONS = {
     "ENABLE_LLEC": False,
 }
 
-SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\11-06-2026\03D2\L40um1\FE\freqency")
+SAVE_DIR = Path("data/pmu/fe_cap/PUND_Squr")
 PREVIEW_ONLY = False
 
 
-# 为本次数据和图片预留同一个文件主名；会在输出目录登记编号，避免覆盖。
+# Reserve one shared file stem for data and plots, registering a run number to avoid overwrites.
 def build_fname_base(*, parameters=None, save_dir=None):
     """Reserve one short output stem shared by the workbook and its plots."""
     parameters = params if parameters is None else parameters
@@ -72,7 +73,7 @@ def build_fname_base(*, parameters=None, save_dir=None):
     return reserve_output_stem(save_dir, name)
 
 
-# 生成双通道 PUND 段波形及采集窗口，供预览或下发仪器；本函数不发送命令。
+# Build both PUND channel segment waveforms and acquisition windows; no commands are sent.
 def make_pund_seq_configs(*, channels=None, parameters=None):
     """Build PUND seq_configs directly in this script."""
     parameters = params if parameters is None else parameters
@@ -167,7 +168,7 @@ def make_pund_seq_configs(*, channels=None, parameters=None):
     return {ch1: [ch1_config], ch2: [ch2_config]}
 
 
-# 根据本次参数生成波形图；不连接仪器，指定 output_path 时保存预览图片。
+# Build the waveform plot without hardware access; save it when output_path is supplied.
 def preview_waveform(output_path=None, *, channels=None, parameters=None):
     """Preview the PUND waveform without connecting to the PMU."""
     parameters = params if parameters is None else parameters
@@ -177,7 +178,7 @@ def preview_waveform(output_path=None, *, channels=None, parameters=None):
     return preview_sequence_configs(make_pund_seq_configs(channels=channels, parameters=parameters)[ch1], output_path, title_prefix="PUND CH1")
 
 
-# 把本次实验参数和仪器选项整理为参数表，供结果文件记录；不执行测量。
+# Build a parameter table from this run's settings and instrument options without acquiring data.
 def build_params_table(*, channels=None, inst=None, parameters=None, segarb_options=None):
     """Return the PUND run parameters as a two-column table."""
     parameters = params if parameters is None else parameters
@@ -199,7 +200,7 @@ def build_params_table(*, channels=None, inst=None, parameters=None, segarb_opti
     return pd.DataFrame(rows)
 
 
-# 将原始双通道数据、PUND 分析结果和参数写入同一个 Excel 文件。
+# Save both raw channels, PUND analysis and parameters in one Excel workbook.
 def save_pund_workbook(
     output_path,
     df_ch1,
@@ -227,8 +228,8 @@ def save_pund_workbook(
     return Path(output_path)
 
 
-# 通过已有 query 连接采集双通道数据，按结果调整固定电流量程后重测，返回双通道数据。
-# 更新本次 parameters，并把接受的 Irange1/Irange2 记回本文件默认参数；重测会再次施加波形。
+# Acquire both channels through an existing query connection; adjust fixed current ranges and retry as needed.
+# Update this run's parameters and persist accepted Irange1/Irange2 defaults; a retry reapplies the waveform.
 def acquire_with_auto_range(query, *, channels=None, parameters=None, segarb_options=None):
     """Acquire PUND data using the shared automatic fixed-range helper."""
     parameters = params if parameters is None else parameters
@@ -236,7 +237,7 @@ def acquire_with_auto_range(query, *, channels=None, parameters=None, segarb_opt
     ch1, ch2 = channels
     segarb_options = remap_channel_options(SEGARB_OPTIONS, (CH1, CH2), channels, segarb_options)
 
-    # 按给定固定量程执行一次波形，读取双通道数据并关闭输出；空数据会报错。
+    # Execute once at fixed ranges, read both channels and turn outputs off; empty data raises an error.
     def acquire_once(ranges):
         current_ranges = {ch1: ranges["Irange1"], ch2: ranges["Irange2"]}
         execute_segARB_test(
@@ -270,7 +271,7 @@ def acquire_with_auto_range(query, *, channels=None, parameters=None, segarb_opt
     return result
 
 
-# 按实际采集段对 P/U、N/D 电流作差并积分，返回方波 PUND 分析结果。
+# Subtract matching P/U and N/D currents by acquisition segment and integrate square-PUND results.
 def analyze_pund_edge_diff(df_ch1, df_ch2, *, channels=None, parameters=None):
     """Analyze PUND data for arbitrary measured segment selections."""
     parameters = params if parameters is None else parameters
@@ -393,8 +394,8 @@ def analyze_pund_edge_diff(df_ch1, df_ch2, *, channels=None, parameters=None):
     }
 
 
-# 以本文件 params 为基础合并 params_override，再采集、分析并保存本次 PUND_Squr。
-# preview_only=True 时只预览；实测返回参数、接受的量程及输出路径，数据保存在工作簿中。
+# Merge params_override with local params, then acquire, analyze and save this PUND_Squr run.
+# preview_only=True previews only; acquisition returns parameters, accepted ranges and output paths; data is in the workbook.
 def run_test(
     params_override=None,
     *,

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Common KXCI validation and error-queue helpers for SMU control."""
 
 # Shared by both SMU command families.

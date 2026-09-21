@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：单次 NLS；先改 PARAMS、INST、CH1/CH2、SEGARB_OPTIONS 和 SAVE_DIR。
-# 流程：文件末尾按 PREVIEW_ONLY 分流 → 构造波形 → 创建 PMU 会话 → run_nls_switch_test 采集/保存。
-# run_nls_switch_test 接收现有 query 连接和本次 params；批量测试由 NLS_1C_switch_list.py 调用。
+# Start here: one NLS test; edit PARAMS, INST, CH1/CH2, SEGARB_OPTIONS and SAVE_DIR.
+# Flow: PREVIEW_ONLY at the file entry point -> waveform construction -> PMU session -> run_nls_switch_test acquisition/save.
+# run_nls_switch_test accepts an existing query connection and params; NLS_1C_switch_list.py handles batch runs.
 
 """NLS switch test helpers and standalone entrypoint."""
 
@@ -22,7 +23,7 @@ for path in (SRC_ROOT, REPO_ROOT):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from keithley4200.tools.waveform_preview import preview_sequence_configs
+from keithley4200.pmu.preview import preview_sequence_configs
 from keithley4200.output import measurement_name, reserve_output_stem, voltage_tag, time_tag, saved_at
 from keithley4200.pmu.data_processing import calculate_polarization, read_both_channels
 from keithley4200.pmu.pmu_tests import execute_segARB_test, power_off_outputs
@@ -36,7 +37,7 @@ SEGARB_OPTIONS = {
     "LOAD_RESISTANCE": 1e3,
     "ENABLE_LLEC": False,
 }
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 CH1, CH2 = 1, 2
 PARAMS = dict(
 
@@ -58,11 +59,11 @@ PARAMS = dict(
 
     
 )
-SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\Jingtian\2025-12-14\BTO\Device3")
+SAVE_DIR = Path("data/pmu/programmed/NLS_1C_switch")
 PREVIEW_ONLY = True
 
 
-# 生成 NLS 写入/读回的双通道波形与采集窗口；本函数不连接仪器。
+# Build both NLS program/read waveforms and acquisition windows without connecting to hardware.
 def make_nls_seq_configs(ch1, ch2, params):
     """Build the NLS sequence with a fixed preset-to-read interval."""
     measure_square = params.get("MeasureSquare", True)
@@ -158,7 +159,7 @@ def make_nls_seq_configs(ch1, ch2, params):
     return {ch1: [ch1_config], ch2: [ch2_config]}
 
 
-# 按 params 离线预览 NLS 双通道波形；指定 output_path 时保存图片。
+# Preview both NLS channels from params offline; save an image if output_path is supplied.
 def preview_nls_waveform(params, output_path=None, *, ch1=1, ch2=2):
     """Preview both programmed NLS channels without connecting to the PMU."""
     seq_configs = make_nls_seq_configs(ch1, ch2, params)
@@ -170,7 +171,7 @@ def preview_nls_waveform(params, output_path=None, *, ch1=1, ch2=2):
     )
 
 
-# 把本次实验参数和仪器选项整理为参数表，供结果文件记录；不执行测量。
+# Build a parameter table from this run's settings and instrument options without acquiring data.
 def build_params_table(params, segarb_options):
     """Return NLS parameters and common PMU options as a two-column table."""
     rows = [{"name": name, "value": repr(value)} for name, value in params.items()]
@@ -183,7 +184,7 @@ def build_params_table(params, segarb_options):
     return pd.DataFrame(rows)
 
 
-# 通过调用者提供的 query 连接执行一次 NLS，保存原始及分析数据并返回结果。
+# Execute one NLS test through the caller's query connection; save raw/analysis data and return results.
 def run_nls_switch_test(
     Q,
     ch1,
@@ -262,7 +263,7 @@ def run_nls_switch_test(
 
     area_cm2 = params.get("area_cm2", 1.0)
 
-    # 将单通道的两组读回电流相减并积分，返回时间、电压、差分电流和极化表。
+    # Subtract and integrate two read-current groups for one channel; return time, voltage, differential current and polarization.
     def process_channel(df, channel):
         voltage = df[f"Voltage {channel}"].values
         current = df[f"Current {channel}"].values

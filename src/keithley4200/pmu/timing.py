@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Timing helpers for Segment Arb baseline holds."""
 
 import math

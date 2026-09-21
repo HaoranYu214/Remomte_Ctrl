@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：ftj_Identical_V1；先改本文件的 INST、CH1/CH2、params、CURRENT_RANGES 和 SAVE_DIR。
-# 流程：run_test 合并本次参数 → build_waveform 构造波形 → PMU 执行/读回 → 整理并保存结果。
-# PREVIEW_ONLY=True 时只预览；run_test 的显式参数优先于文件默认值。
-# 查看波形定义从 build_waveform 开始；一般改实验条件不需要修改下方辅助函数。
+# Start here: ftj_Identical_V1; edit INST, CH1/CH2, params, CURRENT_RANGES and SAVE_DIR.
+# Flow: run_test merges parameters -> build_waveform -> PMU execution/readout -> process and save results.
+# PREVIEW_ONLY=True previews only; explicit run_test arguments override file defaults.
+# Read build_waveform for waveform definitions; routine parameter changes do not require editing helpers below.
 
 """FTJ identical-pulse test with fixed write and read levels.
 
@@ -41,7 +42,7 @@ for path in (SRC_ROOT, REPO_ROOT):
 
 from keithley4200.output import measurement_name, reserve_output_stem, time_tag, saved_at, voltage_tag
 from keithley4200.pmu.data_processing import read_both_channels
-from keithley4200.tools.waveform_preview import preview_sequence_configs
+from keithley4200.pmu.preview import preview_sequence_configs
 from keithley4200.pmu.pmu_tests import (
     MAX_SEGMENTS_PER_SEQUENCE,
     execute_segARB_test,
@@ -51,10 +52,10 @@ from keithley4200.pmu.pmu_tests import (
 from keithley4200.pmu.session import PMUSession
 from keithley4200.measurement_parameters import merge_parameters, remap_channel_options
 
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 CH1, CH2 = 1, 2
-SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L30_2\FTJ\Identical")
-# SAVE_DIR = Path(r"D:\Code\data\20260620")
+SAVE_DIR = Path("data/pmu/ftj/ftj_Identical_V1")
+# Optional: choose a different output directory here.
 FILE_STEM = "Identical1"
 
 CURRENT_RANGES = {CH1: 1e-6, CH2: 1e-6}
@@ -90,7 +91,7 @@ params = {
 }
 
 
-# 按执行计划展开序列列表，拼成一个可下发的 PMU 序列配置。
+# Expand the execution list into one PMU sequence configuration.
 def build_sequence_plan_config(configs, seq_plan, *, seq_id):
     """Flatten a sequence-list plan into one PMU sequence."""
     config_by_id = {config[0]: config for config in configs}
@@ -113,7 +114,7 @@ def build_sequence_plan_config(configs, seq_plan, *, seq_id):
 
     return (seq_id, start_v, stop_v, time_values, meas_types, meas_start, meas_stop)
 
-# 检查生成的序列配置是否符合本脚本要求，在发送到 PMU 前发现参数错误。
+# Validate generated sequence configurations against this script's requirements before sending them to the PMU.
 def validate_sequence_configs(configs_by_channel, seq_list_by_channel):
     """Catch common parameter edit mistakes before sending configs to the PMU."""
     for channel, configs in configs_by_channel.items():
@@ -147,7 +148,7 @@ def validate_sequence_configs(configs_by_channel, seq_list_by_channel):
             raise ValueError(f"CH{channel} SEQ_LIST references missing seq IDs: {missing_seq_ids}")
 
 
-# 向时间—电压端点列表追加一个波形块，用于重建指令波形图。
+# Append a waveform block to time/voltage endpoints for reconstructing commanded-waveform plots.
 def _extend_trace_points(points, start_v, stop_v, time_values, start_time, *, add_gap=True):
     """Append t-V endpoint pairs for one waveform block."""
     cursor = start_time
@@ -161,8 +162,8 @@ def _extend_trace_points(points, start_v, stop_v, time_values, start_time, *, ad
     return cursor
 
 
-# 根据 parameters 和 channels 生成本次波形配置、执行顺序及关联信息。
-# 返回供测量和预览共用的字典；只计算波形，不连接仪器。
+# Build this run's waveform configurations, execution order and metadata from parameters and channels.
+# Return a dictionary shared by acquisition and preview; waveform construction does not connect to hardware.
 def build_waveform(*, parameters=None, channels=None):
     """Build pulse arrays and execution metadata from this run's parameters."""
     parameters = params if parameters is None else parameters
@@ -303,7 +304,7 @@ def build_waveform(*, parameters=None, channels=None):
     }
 
 
-# 根据本次参数生成波形图；不连接仪器，指定 output_path 时保存预览图片。
+# Build the waveform plot without hardware access; save it when output_path is supplied.
 def preview_waveform(
     output_path=None,
     *,
@@ -327,7 +328,7 @@ def preview_waveform(
     )
 
 
-# 把指令波形整理成时间—电压表，供导出和绘图；它不是仪器采集数据。
+# Export commanded waveforms as time/voltage tables; these are not acquired instrument data.
 def build_waveform_trace_table(*, channels=None, parameters=None, waveform=None):
     """Return one wide t-V table for plotting write/read command waveforms."""
     parameters = params if parameters is None else parameters
@@ -372,9 +373,9 @@ def build_waveform_trace_table(*, channels=None, parameters=None, waveform=None)
     return pd.DataFrame({name: pd.Series(values) for name, values in trace_columns.items()})
 
 
-# 合并 params_override 并生成波形，执行固定幅值的重复写入与读回。
-# preview_only=True 时只预览；实测返回数据及输出路径，save_results 控制结果文件保存。
-# 未覆盖参数沿用本文件默认值；电流量程和通道可通过关键字参数单独指定。
+# Merge params_override, build waveforms and execute repeated fixed-amplitude program/read cycles.
+# preview_only=True previews only; acquisition returns data and paths; save_results controls file output.
+# Unspecified settings use local defaults; current ranges and channels have separate keyword overrides.
 def run_test(
     params_override=None,
     *,

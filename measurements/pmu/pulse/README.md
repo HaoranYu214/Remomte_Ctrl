@@ -1,35 +1,33 @@
-# Standard PMU pulse tests
+# Standard PMU Pulse mode
 
 [English](#english) | [中文](#中文)
 
 ## English
 
-These entries use standard Pulse mode (`:PMU:INIT 0`) with generic CH1/CH2 settings. They do not assign fixed Gate/Drain roles or control SMU3. See [fet](../fet/README.md) for three-terminal SegArb program/read tests.
+These scripts use :PMU:INIT 0 with generic CH1/CH2 roles. They do not assign Gate/Drain or control SMU3; use [FET Segment Arb entries](../fet/README.md) for program/read.
 
-| Entry | Purpose | Main parameters |
-|---|---|---|
-| [pulse_train.py](pulse_train.py) | Two fixed-amplitude pulse trains; channel delays can stagger the pulses | CH1/CH2 amplitude, width, delay, PULSE_COUNT |
-| [pulse_sweep.py](pulse_sweep.py) | Sweeps CH1 pulse amplitude while CH2 produces a fixed-amplitude train | CH1_START/STOP/STEP, CH1_DUALSWEEP, CH2_AMPLITUDE |
+| Entry | Main settings |
+|---|---|
+| [pulse_train.py](pulse_train.py) | CH1/CH2 amplitudes, widths, delays and PULSE_COUNT |
+| [pulse_sweep.py](pulse_sweep.py) | CH1_START/STOP/STEP, CH1_DUALSWEEP and fixed CH2_AMPLITUDE |
 
-Edit parameters near the top of each script, then run it directly. Importing a module does not start a measurement. Output locations are configured in each script; saves use shared naming and automatic numbering rules.
+Edit the top settings and output directory before direct execution. Imports do not acquire; these entries have no PREVIEW_ONLY switch.
 
-TEST_MODE selects instrument acquisition: 0 no acquisition, 1 spot, 2 waveform, 3 averaged spot, and 4 averaged waveform. Current measurement ranges are not SMU-style current compliance. Standard Pulse timing definitions differ from SegArb. See the [shared parameter guide (Chinese)](../../../reference/manuals/PARAMETER_LIMITS.md) for range and timing limits.
+TEST_MODE selects 0=no acquisition, 1=spot, 2=waveform, 3=averaged spot or 4=averaged waveform. Current ranges select measurement sensitivity, not SMU compliance. Standard Pulse width/timing definitions differ from Segment Arb; consult the [parameter reference](../../../reference/manuals/PARAMETER_LIMITS.md).
 
-These scripts previously lived in measurements/pmu/fet/. Update old paths in IDE run configurations or scripts outside this repository.
+Saved outputs use shared naming and run-number reservations. Personal launchers should point to this pulse directory.
 
 ## 中文
 
-### PMU 普通脉冲测试
+本目录使用 :PMU:INIT 0，以通用 CH1/CH2 配置，不指定 Gate/Drain，也不控制 SMU3。写读测试使用 [FET Segment Arb 入口](../fet/README.md)。
 
-本目录使用普通 Pulse 模式（`:PMU:INIT 0`），通过 CH1/CH2 配置双通道脉冲；不固定 Gate/Drain 角色，也不控制 SMU3。三端 SegArb 写读测试见 [fet](../fet/README.md)。
+| 入口 | 主要参数 |
+|---|---|
+| [pulse_train.py](pulse_train.py) | CH1/CH2 幅值、脉宽、延迟和 PULSE_COUNT |
+| [pulse_sweep.py](pulse_sweep.py) | CH1_START/STOP/STEP、CH1_DUALSWEEP、固定 CH2_AMPLITUDE |
 
-| 入口 | 用途 | 主要参数 |
-|---|---|---|
-| [pulse_train.py](pulse_train.py) | 两路固定幅值脉冲串，可通过通道延迟错开脉冲 | CH1/CH2 幅值、脉宽、延迟、PULSE_COUNT |
-| [pulse_sweep.py](pulse_sweep.py) | CH1 扫描脉冲幅值，CH2 输出固定幅值脉冲串 | CH1_START/STOP/STEP、CH1_DUALSWEEP、CH2_AMPLITUDE |
+直接执行前修改顶部参数和输出目录。导入不采集；这些入口没有 PREVIEW_ONLY 开关。
 
-在脚本顶部修改参数后直接运行；导入模块不会启动测量。输出目录在各脚本中设置，保存使用公共命名和自动编号规则。
+TEST_MODE：0=不采集、1=定点、2=波形、3=平均定点、4=平均波形。电流档控制测量灵敏度，不是 SMU 限流。普通 Pulse 的脉宽/时间定义与 Segment Arb 不同，参见[参数速查](../../../reference/manuals/PARAMETER_LIMITS.md)。
 
-TEST_MODE 是仪器采集模式：0 不采集，1 定点，2 波形，3 平均定点，4 平均波形。电流测量档不是 SMU 式限流；普通 Pulse 模式的时间定义与 SegArb 不同。范围和时间限制见[公共参数说明](../../../reference/manuals/PARAMETER_LIMITS.md)。
-
-这两个脚本原位于 measurements/pmu/fet/；IDE 运行配置或库外脚本中的旧路径需要更新。
+输出使用公共命名和编号预留。个人启动脚本应指向当前 pulse 目录。

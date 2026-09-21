@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：直接定义波形的 NLS；先改 params、INST、CH1/CH2、SEGARB_OPTIONS 和 SAVE_DIR。
-# 流程：make_nls_seq_configs 定义波形 → main 采集 → save_nls_results 分析并保存。
-# 文件末尾按 PREVIEW_ONLY 选择预览或实测；直接调用 main 会实测。
+# Start here: explicitly defined NLS waveforms; edit params, INST, CH1/CH2, SEGARB_OPTIONS and SAVE_DIR.
+# Flow: make_nls_seq_configs defines waveforms -> main acquires -> save_nls_results analyzes and saves.
+# The file entry point uses PREVIEW_ONLY; calling main directly acquires data.
 
 """NLS switch segARB test with direct sequence definitions."""
 
@@ -22,14 +23,14 @@ for path in (SRC_ROOT, REPO_ROOT):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from keithley4200.tools.waveform_preview import preview_sequence_configs
+from keithley4200.pmu.preview import preview_sequence_configs
 from keithley4200.output import measurement_name, reserve_output_stem, voltage_tag, time_tag, saved_at
 from keithley4200.pmu.data_processing import calculate_polarization, read_both_channels
 from keithley4200.pmu.pmu_tests import execute_segARB_test, power_off_outputs
 from keithley4200.pmu.session import PMUSession
 from keithley4200.pmu.timing import nls_padding_time
 
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 CH1, CH2 = 1, 2
 params = dict(
     offset=0,
@@ -52,11 +53,11 @@ SEGARB_OPTIONS = {
     "ENABLE_LLEC": False,
 }
 
-SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\19-08-2026\Johanna\NLS")
+SAVE_DIR = Path("data/pmu/fe_cap/NLS_manually")
 PREVIEW_ONLY = True
 
 
-# 生成 NLS 写入/读回的双通道波形与采集窗口；本函数不连接仪器。
+# Build both NLS program/read waveforms and acquisition windows without connecting to hardware.
 def make_nls_seq_configs():
     """Build NLS switch seq_configs directly in this script."""
     offset = params["offset"]
@@ -131,13 +132,13 @@ def make_nls_seq_configs():
     return {CH1: [ch1_config], CH2: [ch2_config]}
 
 
-# 根据本次参数生成波形图；不连接仪器，指定 output_path 时保存预览图片。
+# Build the waveform plot without hardware access; save it when output_path is supplied.
 def preview_waveform(output_path=None):
     """Preview the NLS waveform without connecting to the PMU."""
     return preview_sequence_configs(make_nls_seq_configs()[CH1], output_path, title_prefix="NLS CH1")
 
 
-# 把本次实验参数和仪器选项整理为参数表，供结果文件记录；不执行测量。
+# Build a parameter table from this run's settings and instrument options without acquiring data.
 def build_params_table():
     """Return NLS and common PMU options as a two-column table."""
     rows = [{"name": name, "value": repr(value)} for name, value in params.items()]
@@ -150,7 +151,7 @@ def build_params_table():
     return pd.DataFrame(rows)
 
 
-# 处理一个通道的 NLS 数据：对应电流作差，再积分为极化结果表。
+# Process one NLS channel: subtract corresponding currents and integrate to a polarization result table.
 def process_nls_channel(df, channel):
     """Calculate differential polarization for one NLS channel."""
     voltage = df[f"Voltage {channel}"].values
@@ -179,7 +180,7 @@ def process_nls_channel(df, channel):
     )
 
 
-# 保存 NLS 原始数据；按 MeasureSquare 选择波形结果，或计算并保存差分极化结果。
+# Save raw NLS data; MeasureSquare selects waveform results or differential polarization analysis.
 def save_nls_results(df_ch1, df_ch2):
     """Save raw NLS data and processed plots."""
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
@@ -240,8 +241,8 @@ def save_nls_results(df_ch1, df_ch2):
     plt.close(fig)
 
 
-# 连接 PMU 执行本文件 NLS 波形，读取并保存原始数据和差分极化结果。
-# 本函数直接实测；PREVIEW_ONLY 分流在文件末尾。
+# Connect to the PMU, execute the local NLS waveform, and save raw data and differential polarization.
+# This function acquires data; the file entry point handles PREVIEW_ONLY.
 def main():
     """Run the NLS switch measurement."""
     seq_configs = make_nls_seq_configs()

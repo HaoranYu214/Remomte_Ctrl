@@ -1,166 +1,111 @@
-# Keithley4200Measurement
+# Keithley 4200A-SCS measurements
 
 [English](#english) | [中文](#中文)
 
 ## English
 
-Python measurement library and experiment collection for the Keithley
-4200A-SCS. The repository deliberately separates reusable instrument code,
-editable experiment recipes, multi-step workflows, and vendor references.
+Editable PMU and SMU experiments with a shared Python library. Experiment files show the waveform or voltage path and instrument configuration; src handles reusable communication, validation, readout, and saving.
 
-## Layout
+### Start here
 
-- `src/keithley4200/pmu`: reusable PMU commands, sessions, processing, plotting.
-- `src/keithley4200/smu`: reusable SMU system/user-mode commands and RPM routing.
-- `measurements/pmu`: editable PMU experiment recipes grouped by device/test type.
-  See the [FET entry guide](measurements/pmu/fet/README.md) for pulse, program/read, and sweep entry points.
-- `measurements/smu`: editable SMU experiment recipes.
-- `measurements/workflows`: multi-test measurement packages and one-click routes.
-- `src/keithley4200/tools`: offline preview and dry-run helpers.
-- `reference`: official examples and manuals; not maintained as production code.
-- `tests`: hardware-free unit tests using fake instrument responses.
+Requires Python 3.10 or newer. From the repository root:
 
-Experiment files remain directly runnable. Each one adds this repository's
-`src` directory to `sys.path`, so an editable install is optional. For normal
-library use, install once with `python -m pip install -e .` and import from
-`keithley4200`.
+~~~powershell
+python -m pip install -e .
+python measurements/smu/2terminal/example.py
+~~~
 
-Running an experiment can contact the instrument. Unit tests and waveform
-preview helpers are hardware-free.
+The two-terminal example defaults to PREVIEW_ONLY=True: it prints configuration commands and plots commanded voltages without connecting or saving. Copy it to build a new test; use the [three-terminal example](measurements/smu/3terminal/README.md) for three SMUs. Check the current file settings before running other entries: preview behavior is entry-specific. Real acquisition requires the instrument's VISA connection and KXCI setup.
 
+### Local instrument settings
 
-## Saved results
+Public examples use TCPIP0::192.0.2.1::1225::SOCKET and relative data/<experiment> output directories, resolved from the working directory. Replace the example resource before acquisition. The data/ and .local/ directories are ignored by Git. Private settings backups, when present, live in .local/private-config/ and are never loaded automatically. Restoring settings into source files makes those files private again.
 
-Automatic measurement outputs use short names, with voltage before timing:
+### Repository map
 
-```text
-PV2_03.00V_tr250us_td1000us_r001.xlsx
-PV2_03.00V_tr250us_td1000us_r001_i2.png
-PV2_03.00V_tr250us_td1000us_r002.xlsx
-PUNDtri_03.50V_tr250us_td1000us_r001.xlsx
-PUND_03.50V_tr250us_td1000us_tw50us_r001.xlsx
-```
+| Directory | What belongs here |
+|---|---|
+| [measurements/pmu](measurements/pmu/README.md) | Pulse waveforms, PV/PUND, FTJ and FeFET experiments |
+| [measurements/smu](measurements/smu/README.md) | 2terminal / 3terminal DC experiments and examples |
+| [measurements/workflows](measurements/workflows/README.md) | Ordered tests, parameter maps and batch settings |
+| [src/keithley4200](src/keithley4200/README.md) | Shared PMU/SMU mechanisms and output utilities |
+| [tests](tests/README.md) | Hardware-free regression tests; retained in Git |
+| [reference](reference/README.md) | Manuals and original vendor examples |
 
-- `tr`: rise time; `td`: delay; `tw`: dwell/pulse width. Times use microseconds,
-  including fractions such as `0.1us`. PV2 and PUND always include delay.
-- Voltage uses at least two integer digits and two fixed decimal places, so
-  positive labels below 100 V sort as `03.00V, 03.01V, 03.02V`.
-  Labels round to 0.01 V; settings that round to the same label receive different run numbers.
-  Full precision remains in saved parameters. Negative bias labels retain the minus sign; alphabetical ordering is not a
-  signed numerical sort, and magnitudes of 100 V or more need numeric sorting.
-- Each acquisition reserves the first available `r001, r002, ...` for the entire
-  workbook/image group. Existing companions count as occupied, even if the
-  workbook is missing. Full parameters and an ISO `saved_at` timestamp remain in
-  the parameter-bearing workbooks; display labels are not a parameter archive.
-- Reservations use exclusive file creation in `.reservations/`, coordinating
-  separate processes using the shared helper. Keep this internal ledger with
-  the data directory. Interrupted or failed runs can leave gaps intentionally.
-- Standalone measurements and batch workflows use their configured directories
-  directly. No automatic time subdirectory is added; existing test/stage folders
-  are retained. Summary outputs include a per-invocation time, for example
-  `map_summary_20260911_103449_r001.xlsx`. The same Excel summary is updated
-  after each stage and at completion; no duplicate CSV is produced. Updates
-  replace the previous workbook only after the new file has been written.
-  A `time` column records the same ISO timestamp. Output paths are omitted
-  so summaries remain useful after moving the data. A later invocation
-  reserves a new summary name, including for same-second runs.
-- Existing data is not renamed. Script/module names and measurement waveforms
-  are unchanged. Explicit low-level save/preview functions still honor the exact
-  path supplied by their caller; automatic naming belongs at the acquisition
-  entry point.
+Only src/keithley4200 is installed as a package. Experiment entries bootstrap the source path when run directly; workflows also need the measurements directory from the checkout.
 
-PV/PUND polarization figures show I2 only; raw I1 data and I1 analysis tables remain saved.
+### Reading and editing a test
 
-The common helpers live in `src/keithley4200/output.py`. Reserve a stem once with
-`reserve_output_stem(directory, measurement_name(...))`, then append extensions
-or plot suffixes to that same stem for every companion output.
+Read the file header, editable settings, then the runner at the bottom. SMU examples order settings as hardware defaults → directory/channels/preview switches → sweep definition → electrical and sampling parameters. Internal result-column names appear later.
 
-## Offline dry runs
+SMU linear, segmented, logarithmic and explicit paths all produce VL lists. Point algorithms live in smu/points.py; CH/VL/VC/timing/range commands remain visible in each experiment. PMU pulse sequences remain in their experiment files. PMU preview uses time; SMU preview uses point index. Neither is a measured result.
 
-`python src/keithley4200/tools/dry_run.py --no-save measurements/pmu/fe_cap/PV2.py` intercepts
-instrument communication and generates synthetic data from the configured
-Segment Arb or pulse commands. Segment Arb skips unmeasured segments, retains
-their elapsed time, returns one point per spot measurement, and samples each
-waveform segment at 32 points. The ordinary data reader still parses the
-responses, including block reads and pulse High/Low fields.
+### Results and offline checks
 
-These data test software flow; they do not simulate device physics or the
-instrument sample rate. Averaged acquisition modes and acquisitions exceeding
-65,536 synthetic points raise explicit errors. Run the helper in a separate
-process: its communication, sleep, and optional save hooks are process-wide.
+Output groups share a reserved stem, for example PV2_03.00V_tr250us_td1000us_r001.xlsx and its plot companions. tr/td/tw are rise/delay/width in microseconds. Labels round voltage to two decimals; full settings remain in parameter sheets. Existing workbooks or companion plots occupy a run number. Keep the .reservations directory with the data; interrupted runs may leave gaps.
 
-After an editable install, the equivalent module command is
-`python -m keithley4200.tools.dry_run --no-save measurements/pmu/fe_cap/PV2.py`.
-Preview helpers are imported from `keithley4200.tools.waveform_preview`.
-Explicit relative script paths are resolved from the current working directory;
-the default RV2 script is located relative to the source checkout. A packaged
-installation without the experiment files requires an explicit script path.
+Configured output directories are used directly. Progress summaries are updated as one Excel workbook per invocation, using atomic replacement after successful writing. Low-level helpers still honor explicit output paths. PV/PUND polarization figures show I2; raw I1 and its analysis remain saved.
 
-## Usage navigation
+~~~powershell
+$env:MPLBACKEND = "Agg"
+python -m unittest discover -s tests
+python src/keithley4200/tools/dry_run.py --no-save measurements/pmu/fe_cap/PV2.py
+~~~
 
-- [Measurement entries](measurements/README.md): choose a test and adjust device parameters.
-- [Workflows](measurements/workflows/README.md): batch sweeps and multi-step measurements.
-- [Shared source](src/README.md): package structure and tools.
-- [Parameter and mode reference](reference/manuals/PARAMETER_LIMITS.md): voltage/current ranges, SMU compliance, mode codes such as 0/1/2, and source page numbers.
-- [Tests](tests/README.md): offline verification instructions.
+The [PMU dry-run tool](src/keithley4200/tools/README.md) checks software flow with synthetic responses. It does not simulate device physics. Instrument display and buffer behavior still require hardware verification.
 
-Parameter comments explain usage; they do not replace verification of a device's safe operating range. The documentation work does not change experiment parameters.
-
-Parameter source: [manual limits and mode reference (Chinese)](reference/manuals/PARAMETER_LIMITS.md).
+See the [parameter and mode reference](reference/manuals/PARAMETER_LIMITS.md) for documented limits and source pages.
 
 ## 中文
 
-### Keithley4200Measurement
+本仓库提供可直接修改的 PMU、SMU 实验及公共 Python 库。实验文件展示波形或电压路径、仪器配置；src 负责复用通信、校验、读数和保存。
 
-用于 Keithley 4200A-SCS 的 Python 测量库与实验脚本集合。公共仪器代码、可编辑实验、多步工作流及厂商参考资料分别存放。
+### 从哪里开始
 
-## 目录结构
+需要 Python 3.10 或更新版本。在仓库根目录执行：
 
-- src/keithley4200/pmu：PMU 命令、会话、数据处理和绘图。
-- src/keithley4200/smu：SMU System/User Mode 命令及 RPM 路由。
-- measurements/pmu：按器件和测试类型组织的 PMU 实验；入口见 [FET 指南](measurements/pmu/fet/README.md)。
-- measurements/smu：可编辑的 SMU 实验。
-- measurements/workflows：多测试组合与参数扫描。
-- src/keithley4200/tools：离线预览及 dry-run。
-- reference：官方示例和手册，不作为维护中的实验代码。
-- tests：使用模拟仪器响应的离线测试。
+~~~powershell
+python -m pip install -e .
+python measurements/smu/2terminal/example.py
+~~~
 
-实验文件可直接运行，会把仓库 src 加入导入路径。作为库使用时，在仓库根目录执行 python -m pip install -e .，再从 keithley4200 导入。实测入口可能连接仪器；单元测试与波形预览不连接仪器。
+两端示例默认 PREVIEW_ONLY=True：只打印配置命令、绘制指令电压，不连接或保存。可以复制它新建实验；三路 SMU 从[三端示例](measurements/smu/3terminal/README.md)开始。其他入口的预览行为各不相同，运行前查看文件当前设置。实测需要配置仪器 VISA 连接与 KXCI。
 
-## 保存结果
+### 本地仪器设置
 
-文件名优先显示电压，再显示时间参数，例如 PV2_03.00V_tr250us_td1000us_r001.xlsx；同次测量的图形沿用同一文件主名并加 _i2.png 等后缀。下一次同名测量使用 r002。
+公开示例使用 TCPIP0::192.0.2.1::1225::SOCKET 和相对输出目录 data/<实验路径>，相对当前工作目录解析。实测前替换示例资源地址。data/、.local/ 已加入 Git 忽略；本地配置备份放在 .local/private-config/，不会自动加载。把原配置恢复到源码后，这些源码会再次包含私人设置。
 
-- tr 为上升时间，td 为等待时间，tw 为平台或脉宽。时间用微秒表示，允许 0.1us 等小数；PV2/PUND 始终包含 delay。
-- 电压至少两位整数、固定两位小数，因此 100 V 以下正电压可按名称正确排序。标签舍入至 0.01 V，舍入后同名的测试用不同编号区分，参数表保留完整数值。负电压保留负号；负数和 100 V 以上数值需按数值排序。
-- 每次采集为整组表格与图形占用首个空闲 r001/r002 编号。即使表格不存在，已有配套图形也视为占用。包含参数的表格保留完整参数和 ISO 格式 saved_at，文件名不能替代参数记录。
-- .reservations/ 使用独占文件创建协调多个进程，应随数据目录保留。失败或中断可能有意留下空号。
-- 独立测试和工作流直接使用设置的目录，不再额外增加时间目录，已有测试/阶段目录保留。汇总名仍包含本轮时间，例如 map_summary_20260911_103449_r001.xlsx，每个阶段及结束时更新同一 Excel，不再生成重复 CSV；新工作簿写好后才替换上一版。time 列记录同一 ISO 时间，不保存输出路径，便于移动数据。下一轮占用新编号，同秒运行也不覆盖。
-- 已有数据不重命名。底层保存/预览函数仍使用调用者给定的精确路径；自动命名在采集入口完成。
+### 目录导航
 
-PV/PUND 极化图只画 I2；I1 原始数据和分析表仍保存。
+| 目录 | 内容 |
+|---|---|
+| [measurements/pmu](measurements/pmu/README.md) | 脉冲波形、PV/PUND、FTJ、FeFET 实验 |
+| [measurements/smu](measurements/smu/README.md) | 2terminal / 3terminal 直流实验和示例 |
+| [measurements/workflows](measurements/workflows/README.md) | 顺序测试、参数扫描及批量配置 |
+| [src/keithley4200](src/keithley4200/README.md) | PMU/SMU 公共机制与输出工具 |
+| [tests](tests/README.md) | 不连接硬件的回归测试，保留在 Git 中 |
+| [reference](reference/README.md) | 手册和原始官方示例 |
 
-公共命名在 src/keithley4200/output.py：调用 reserve_output_stem(directory, measurement_name(...)) 一次，整组输出共享返回的主名。
+安装范围只有 src/keithley4200。实验入口直接运行时会加入源码路径；工作流还需要源码仓库中的 measurements 目录。
 
-## 离线模拟
+### 如何阅读和修改实验
 
-在仓库根目录运行：
+先看文件头部说明和参数，再看底部调用的执行函数。SMU 示例按“硬件默认设置 → 目录、通道、预览开关 → 扫描定义 → 电气与采样参数”排列；内部结果列名放在后面。
 
-    python src/keithley4200/tools/dry_run.py --no-save measurements/pmu/fe_cap/PV2.py
+SMU 的 linear、segments、log、list 都生成 VL 列表。取点算法放在 smu/points.py，CH/VL/VC、时间和量程命令直接写在实验里。PMU 的脉冲序列也保留在各实验文件。PMU 预览横轴是时间，SMU 是点序号；两者都是指令预览。
 
-工具拦截通信，根据配置的 Segment Arb 或普通脉冲命令产生模拟数据。SARB 不测量的段仍累计时间；定点段返回一点，波形段返回 32 点。普通读取器继续解析这些响应，包括分块读取和脉冲 High/Low 字段。
+### 结果与离线检查
 
-模拟用于检查软件流程，不模拟器件物理或真实采样率。平均采集模式和超过 65,536 模拟点的采集会明确报错。通信、sleep 和保存替换影响整个进程，应在独立进程运行。
+同次输出共用预留主名，例如 PV2_03.00V_tr250us_td1000us_r001.xlsx 及其配套图片。tr/td/tw 表示上升、等待、脉宽，单位微秒。文件名电压保留两位小数，完整设置保存在参数表。已有表格或配套图片都会占用编号；.reservations 应随数据目录保留，中断可能留下空号。
 
-可编辑安装后也可使用 python -m keithley4200.tools.dry_run --no-save 加实验路径。预览从 keithley4200.tools.waveform_preview 导入。显式相对路径以当前工作目录为准；默认 RV2 路径相对源码仓库确定。只安装包、未包含实验文件时，必须提供实验文件路径。
+输出直接使用配置目录。每次调用使用一个 Excel 汇总表持续更新，新文件写成功后才原子替换旧版。底层辅助函数仍尊重显式路径。PV/PUND 极化图展示 I2，I1 原始数据和分析仍保存。
 
-## 中文使用导航
-- [测量入口](measurements/README.md)：选测试、改器件参数。
-- [工作流](measurements/workflows/README.md)：批量扫描和多步测量。
-- [公共源码](src/README.md)：包结构及工具。
-- [参数与模式速查](reference/manuals/PARAMETER_LIMITS.md)：电压、电流档、SMU 限流、0/1/2 等模式码及来源页码。
-- [测试说明](tests/README.md)：离线验证方式。
+~~~powershell
+$env:MPLBACKEND = "Agg"
+python -m unittest discover -s tests
+python src/keithley4200/tools/dry_run.py --no-save measurements/pmu/fe_cap/PV2.py
+~~~
 
-参数注释是使用说明，不会替代验证器件安全范围；本次文档整理不改变实验参数。
+[PMU dry-run](src/keithley4200/tools/README.md) 使用模拟响应检查软件流程，不模拟器件物理。仪器窗口显示与缓冲区行为仍需实机验证。
 
-参数依据：[手册限制与模式速查](reference/manuals/PARAMETER_LIMITS.md)。
+参数限制及出处见[参数与模式速查](reference/manuals/PARAMETER_LIMITS.md)。

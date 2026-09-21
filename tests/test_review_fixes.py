@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Regression checks for entry isolation, FET mapping, and synthetic acquisition."""
 from contextlib import ExitStack, redirect_stdout
 import importlib

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Hardware-free regression checks for output grouping and overwrite protection."""
 
 from concurrent.futures import ThreadPoolExecutor

@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：重复分段 I–V；先改 LOOP_COUNT、TURNING_POINTS、SEGMENT_STEP、PARAMS 和 SAVE_DIR。
-# 顶部设置从 segmented_voltage_sweep.py 复制初值，可在本文件修改；调用参数再覆盖本文件配置。
-# 流程：main → run_endurance → 每轮独立分段扫描和保存 → 每轮更新汇总。
-# PREVIEW_ONLY=True 时只预览一轮路径；INTER_RUN_DELAY_S 是轮次间额外等待。
+# Entry: repeated segmented I-V; edit LOOP_COUNT, TURNING_POINTS, SEGMENT_STEP, PARAMS, and SAVE_DIR.
+# Initial settings are copied from segmented_voltage_sweep.py and can be edited here; call arguments take precedence.
+# Flow: main -> run_endurance -> independent sweep/save each round -> update summary each round.
+# PREVIEW_ONLY=True previews one path; INTER_RUN_DELAY_S adds a wait between rounds.
 
 """Repeat complete segmented SMU I-V sweeps, saving each completed run."""
 
 from datetime import datetime
+import importlib
 from pathlib import Path
 import math
 import sys
@@ -19,28 +21,34 @@ for path in (REPO_ROOT / "src", REPO_ROOT):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from measurements.smu.iv import segmented_voltage_sweep as segmented
+segmented = importlib.import_module("measurements.smu.2terminal.segmented_voltage_sweep")
 from keithley4200.output import reserve_summary_stem, save_summary_workbook
-from keithley4200.smu.system_mode import build_segmented_voltage_path
 
+# Instrument and wiring defaults: check when changing hardware or connections.
+INST = segmented.INST
+# All installed/mapped channels; direct means a direct connection and rpm means routing through an RPM.
+AVAILABLE_CHANNELS = tuple(segmented.AVAILABLE_CHANNELS)
+SMU_CONNECTIONS = dict(segmented.SMU_CONNECTIONS)
+
+# Run settings: output directory, active channels, offline preview, and KXCI plots.
+SAVE_DIR = segmented.SAVE_DIR
+SWEEP_CHANNEL = segmented.SWEEP_CHANNEL
+BIAS_CHANNEL = segmented.BIAS_CHANNEL
+PREVIEW_ONLY = False
+KXCI_PLOT = segmented.KXCI_PLOT  # Display each round in KXCI without overlaying previous rounds.
+
+# Key sweep parameters.
 # One run is the entire TURNING_POINTS path, not one voltage segment.
 LOOP_COUNT = 20
-PREVIEW_ONLY = False
 INTER_RUN_DELAY_S = 0.0
-SAVE_DIR = segmented.SAVE_DIR
 FILE_STEM = "IVendurance"
 
 # Start from the standalone test settings; edit this file independently.
-INST = segmented.INST
-SWEEP_CHANNEL = segmented.SWEEP_CHANNEL
-BIAS_CHANNEL = segmented.BIAS_CHANNEL
-AVAILABLE_CHANNELS = tuple(segmented.AVAILABLE_CHANNELS)
-SMU_CONNECTIONS = dict(segmented.SMU_CONNECTIONS)
 DEVICE_AREA_CM2 = segmented.DEVICE_AREA_CM2
 TURNING_POINTS = list(segmented.TURNING_POINTS)
 SEGMENT_STEP = segmented.SEGMENT_STEP
+# Electrical and sampling parameters.
 PARAMS = dict(segmented.PARAMS)
-NAMES = dict(segmented.NAMES)
 # Example overrides:
 # TURNING_POINTS = [0.0, 4.0, 0.0, -4.0, 0.0]
 # PARAMS["sweep_current_compliance"] = 1e-4
@@ -48,14 +56,14 @@ NAMES = dict(segmented.NAMES)
 # Hardware limits and compliance/range meanings are documented in src/keithley4200/smu.
 
 
-# 合并参数后重复调用分段 I–V 实测，每轮保存数据及状态汇总；失败或中断时停止。
-# preview_only=True 时只预览一轮电压路径；实测返回 summary、summary_path 和 output_paths。
-# inter_run_delay_s 是额外等待，不包含重连、传输和保存所需时间。
+# Merge settings, repeat segmented acquisition, and save data/status each round; stop on failure or interruption.
+# preview_only=True previews one path; acquisition returns summary, summary_path, and output_paths.
+# inter_run_delay_s is extra waiting time, excluding reconnection, transfer, and saving.
 def run_endurance(params_override=None, *, loop_count=None, turning_points=None,
                   segment_step=None, save_dir=None, preview_only=None,
                   inter_run_delay_s=None, inst=None, device_area_cm2=None,
                   sweep_channel=None, bias_channel=None, available_channels=None,
-                  smu_connections=None, names=None):
+                  smu_connections=None, names=None, kxci_plot=None):
     """Repeat independent acquisitions; stop and checkpoint on failure/interruption.
 
     Each iteration uses the segmented entry's shutdown and save behavior.
@@ -71,7 +79,7 @@ def run_endurance(params_override=None, *, loop_count=None, turning_points=None,
         raise ValueError("inter_run_delay_s must be finite and nonnegative.")
     points = list(TURNING_POINTS if turning_points is None else turning_points)
     step = SEGMENT_STEP if segment_step is None else segment_step
-    values = build_segmented_voltage_path(points, step)
+    values = segmented.build_points(points, step)
     if len(values) > 4096:
         raise ValueError("Each segmented IV run is limited to 4096 points.")
     parameters = dict(PARAMS)
@@ -83,6 +91,9 @@ def run_endurance(params_override=None, *, loop_count=None, turning_points=None,
     preview = PREVIEW_ONLY if preview_only is None else preview_only
     if preview:
         figure = segmented.preview_waveform(turning_points=points, segment_step=step,
+                                             sweep_channel=SWEEP_CHANNEL if sweep_channel is None else sweep_channel,
+                                             bias_channel=BIAS_CHANNEL if bias_channel is None else bias_channel,
+                                             bias_voltage=parameters["bias_voltage"],
                                              title=f"IV endurance: {count} repeats, {len(values)} points/run")
         return {"preview": figure, "loop_count": count, "summary_path": None}
 
@@ -98,6 +109,7 @@ def run_endurance(params_override=None, *, loop_count=None, turning_points=None,
         available_channels=AVAILABLE_CHANNELS if available_channels is None else available_channels,
         smu_connections=dict(SMU_CONNECTIONS if smu_connections is None else smu_connections),
         names=dict(NAMES if names is None else names),
+        kxci_plot=KXCI_PLOT if kxci_plot is None else kxci_plot,
     )
     rows = []
     output_paths = []
@@ -110,7 +122,7 @@ def run_endurance(params_override=None, *, loop_count=None, turning_points=None,
         print(f"Segmented IV endurance: run {index}/{count}")
         try:
             result = segmented.run_test(
-                params_override=parameters,
+                params_override=parameters, preview_only=False,
                 file_stem=f"{FILE_STEM}_run{index:0{digits}d}", **settings)
             output_paths.append(result["output_path"])
             row["status"] = "ok"
@@ -128,9 +140,14 @@ def run_endurance(params_override=None, *, loop_count=None, turning_points=None,
     return {"summary": rows, "summary_path": summary_path, "output_paths": output_paths}
 
 
-# 按本文件的循环次数、参数和 PREVIEW_ONLY 设置启动 I–V endurance。
+# Start I-V endurance using this file's repeat count, parameters, and PREVIEW_ONLY setting.
 def main():
     return run_endurance()
+
+
+# Internal definitions used by the experiment; ordinary parameter changes belong above.
+# Instrument variables and result column names; usually unchanged.
+NAMES = dict(segmented.NAMES)
 
 
 if __name__ == "__main__":

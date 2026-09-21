@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：NLS 参数扫描；先改 BASE_PARAMS、Dwell_list、Vsquare_list、INST、通道和 SAVE_DIR。
-# 每个点复制 BASE_PARAMS，再覆盖 Dwell/Vsquare；不使用单次入口的 PARAMS 作为扫描默认值。
-# 流程：run_sweep 遍历组合 → run_nls_switch_test 采集/保存 → 输出汇总工作簿。
-# 文件末尾 PREVIEW_ONLY=True 时仅预览第一个组合；直接调用 run_sweep 会实测。
+# Start here: NLS parameter sweep; edit BASE_PARAMS, Dwell_list, Vsquare_list, INST, channels and SAVE_DIR.
+# Copy BASE_PARAMS and override Dwell/Vsquare per point; do not inherit the single-run PARAMS as sweep defaults.
+# Flow: run_sweep iterates combinations -> run_nls_switch_test acquires/saves -> summary workbook.
+# PREVIEW_ONLY=True at the file entry point previews only the first combination; run_sweep directly acquires data.
 
 """Batch parameter sweep for the NLS switch test."""
 
@@ -31,7 +32,7 @@ from keithley4200.output import prepare_output_dir, reserve_summary_stem
 from keithley4200.pmu.session import PMUSession
 from keithley4200.pmu.timing import nls_padding_time
 
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 CH1, CH2 = 1, 2
 SEGARB_OPTIONS = {
     "ENABLE_CONNECTION_COMP": False,
@@ -55,12 +56,12 @@ BASE_PARAMS = dict(
     area_cm2=(20*1e-4)**2*3.14,
 )
 
-SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\19-08-2026\Johanna\NLS_Sweep")
+SAVE_DIR = Path("data/pmu/programmed/NLS_1C_switch_list")
 Dwell_list = np.logspace(-7, -1, 31)
 Vsquare_list = np.arange(0, 2.0, 0.1)
 
 
-# 只预览 NLS 扫描列表的第一个组合，不连接仪器，也不代表全部扫描点。
+# Preview only the first NLS parameter combination without hardware access; it does not represent all sweep points.
 def preview_sweep_waveform(output_path=None):
     """Preview the first configured sweep point without connecting to the PMU."""
     preview_params = BASE_PARAMS.copy()
@@ -74,8 +75,8 @@ def preview_sweep_waveform(output_path=None):
     )
 
 
-# 遍历 Dwell_list × Vsquare_list，通过 PMU 逐点测量并保存结果及汇总。
-# 返回各点结果列表；预览分支由文件末尾的 PREVIEW_ONLY 判断。
+# Iterate Dwell_list x Vsquare_list, acquire each PMU point and save results and summaries.
+# Return a list of point results; the file entry point handles the PREVIEW_ONLY branch.
 def run_sweep():
     """Run a Dwell x Vsquare sweep and save a summary workbook."""
     for dwell in Dwell_list:

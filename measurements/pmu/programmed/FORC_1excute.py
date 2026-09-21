@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：整组曲线一次连续执行的 FORC；先改 PARAMS、REVERSAL_*、INST、通道和 SAVE_DIR。
-# 流程：build_combined_forc_layout 拼接波形 → 一次执行/读回 → 拆分各反转曲线 → 分析并保存。
-# 文件末尾按 PREVIEW_ONLY 分流；main 和使用已有连接的 run_forc_test 均执行实测。
+# Start here: one continuous execution of a FORC family; edit PARAMS, REVERSAL_*, INST, channels and SAVE_DIR.
+# Flow: build_combined_forc_layout -> one execution/readout -> split reversal curves -> analyze and save.
+# The file entry point handles PREVIEW_ONLY; main and run_forc_test both acquire data.
 
 """Run the complete ferroelectric FORC family in one PMU execution.
 
@@ -40,7 +41,7 @@ from keithley4200.pmu.pmu_tests import (
 from keithley4200.pmu.session import PMUSession
 
 
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 CH1, CH2 = 1, 2
 
 PARAMS = dict(
@@ -68,16 +69,16 @@ SEGARB_OPTIONS = dict(
     ENABLE_LLEC=False,
 )
 
-SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\FORC")
+SAVE_DIR = Path("data/pmu/programmed/FORC_1excute")
 PREVIEW_ONLY = True
 
 
-# 根据反转电压计算单分支时长，使不同 FORC 曲线保持相同电压变化速率。
+# Calculate branch duration from reversal voltage to keep the same voltage ramp rate across curves.
 def _branch_time(params, reversal_voltage):
     return separate_forc._branch_time(params, reversal_voltage)
 
 
-# 构造并校验包含全部反转曲线的连续序列，同时记录采集段归属。
+# Build and validate one continuous sequence containing all reversal curves and track acquisition-segment ownership.
 def build_combined_forc_layout(
     ch1=CH1,
     ch2=CH2,
@@ -103,7 +104,7 @@ def build_combined_forc_layout(
     measure_types = []
     measured_segments = []
 
-    # 向连续 FORC 波形追加一个段；有 metadata 时一并记录采集段位置和时长。
+    # Append one continuous-FORC segment; record its acquisition position and duration when metadata is supplied.
     def add_segment(start, stop, duration, measure_type, metadata=None):
         starts.append(float(start))
         stops.append(float(stop))
@@ -201,7 +202,7 @@ def build_combined_forc_layout(
     }
 
 
-# 返回包含全部反转曲线的单序列双通道配置，供预览和一次执行共用。
+# Return one two-channel sequence containing all reversal curves, shared by preview and acquisition.
 def make_forc_seq_configs(
     ch1=CH1,
     ch2=CH2,
@@ -217,7 +218,7 @@ def make_forc_seq_configs(
     )["seq_configs"]
 
 
-# 离线预览整组 FORC 一次执行的连续波形；不连接仪器。
+# Preview the continuous, single-execution FORC waveform without hardware access.
 def preview_forc_waveforms(
     output_path=None,
     *,
@@ -306,7 +307,7 @@ def preview_forc_waveforms(
     return output_path
 
 
-# 根据共同采样率和各采集窗口时长分配点数，供连续 FORC 数据拆分。
+# Allocate sample counts from a shared sampling rate and window durations to split continuous FORC data.
 def _allocate_measured_segment_counts(point_count, measured_segments):
     """Allocate returned points using the common sample rate and window times."""
     if point_count < 3 * len(measured_segments):
@@ -327,7 +328,7 @@ def _allocate_measured_segment_counts(point_count, measured_segments):
     return counts.tolist()
 
 
-# 对已拆分的一条下降/返回分支进行积分，生成该反转电压的分析结果。
+# Integrate one extracted descending/return branch for its reversal-voltage analysis.
 def _analyze_curve_segments(
     descending_ch1,
     return_ch1,
@@ -404,7 +405,7 @@ def _analyze_curve_segments(
     )
 
 
-# 按波形布局把一次读出的连续缓冲区拆回各条 FORC 曲线并分析。
+# Split the continuous acquisition buffer into FORC curves using the waveform layout, then analyze them.
 def split_combined_forc_data(
     df_ch1,
     df_ch2,
@@ -465,8 +466,8 @@ def split_combined_forc_data(
     return raw_ch1_frames, raw_ch2_frames, forc_frames
 
 
-# 使用已有 query 连接一次执行整组 FORC，读回后按反转曲线拆分、分析和保存。
-# 返回拆分结果及输出信息；params 和 reversal_voltages 指定本次配置。
+# Execute the full FORC family once through the existing connection; split, analyze and save the returned data.
+# Return split results and output information; params and reversal_voltages specify this run.
 def run_forc_test(
     query,
     *,
@@ -551,7 +552,7 @@ def run_forc_test(
     }
 
 
-# 创建 PMU 会话并调用 run_forc_test 实测；文件末尾负责按 PREVIEW_ONLY 选择预览或测量。
+# Create a PMU session and acquire via run_forc_test; the file entry point selects preview or measurement.
 def main():
     with PMUSession(INST, channels=(CH1, CH2)) as session:
         run_forc_test(session.query)

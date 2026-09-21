@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 from pathlib import Path
 import importlib.util
 from types import SimpleNamespace
@@ -15,10 +16,10 @@ for path in (SRC_ROOT, REPO_ROOT):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from keithley4200.smu.system_mode import build_segmented_voltage_path, run_list_voltage_sweep
+from keithley4200.smu.system_mode import build_segmented_voltage_path
 
 
-PACKAGE_PATH = REPO_ROOT / "measurements" / "workflows" / "package1.py"
+PACKAGE_PATH = REPO_ROOT / "measurements" / "workflows" / "FEcap_package1.py"
 
 
 def load_package():
@@ -42,7 +43,7 @@ class FtjPackage1Tests(unittest.TestCase):
         package = load_package()
         modules = {
             "iv": SimpleNamespace(
-                build_segmented_voltage_path=build_segmented_voltage_path
+                build_points=build_segmented_voltage_path
             )
         }
         counts = package.validate_package_config(modules)
@@ -103,8 +104,9 @@ class FtjPackage1Tests(unittest.TestCase):
             ),
         )
         iv = SimpleNamespace(
-            build_segmented_voltage_path=build_segmented_voltage_path,
-            main=lambda: calls.append("iv"),
+            build_points=build_segmented_voltage_path,
+            PREVIEW_ONLY=True,
+            run_test=mock.Mock(side_effect=lambda **kwargs: calls.append("iv")),
         )
         fake_modules = {"pair": pair, "map": map_module, "iv": iv}
 
@@ -133,6 +135,8 @@ class FtjPackage1Tests(unittest.TestCase):
         self.assertNotIn("output_root", result.columns)
         self.assertNotIn("new_files", result.columns)
         self.assertTrue((result["status"] == "ok").all())
+        self.assertTrue(iv.PREVIEW_ONLY)
+        self.assertTrue(all(call.kwargs == {"preview_only": False} for call in iv.run_test.call_args_list))
         last_iv = package.IV_TESTS[-1]
         self.assertEqual(
             iv.TURNING_POINTS,
@@ -186,15 +190,11 @@ class FtjPackage1Tests(unittest.TestCase):
             self.assertFalse((package.BASE_SAVE_DIR / "00_previews").exists())
 
     def test_oversized_list_is_rejected_before_any_hardware_command(self):
-        fake = FakeKxci()
-        with self.assertRaisesRegex(ValueError, "4096"):
-            run_list_voltage_sweep(
-                fake,
-                values=[0.0] * 4097,
-                sweep_channel=1,
-                bias_channel=2,
-            )
-        self.assertEqual(fake.commands, [])
+        module = importlib.import_module("measurements.smu.2terminal.segmented_voltage_sweep")
+        with mock.patch.object(module, "SMUSession") as session:
+            with self.assertRaisesRegex(ValueError, "4096"):
+                module.run_test(turning_points=[0, 4096], segment_step=1)
+            session.assert_not_called()
 
 
 if __name__ == "__main__":

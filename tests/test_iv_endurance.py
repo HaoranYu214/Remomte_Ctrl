@@ -1,3 +1,5 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
+import importlib
 """Offline coverage for repeated segmented IV acquisition and checkpoints."""
 import sys
 from pathlib import Path
@@ -6,8 +8,8 @@ from copy import deepcopy
 from unittest import TestCase, mock
 import tempfile
 import pandas as pd
-from measurements.smu.iv import iv_endurance as endurance
-from measurements.smu.iv import segmented_voltage_sweep as segmented
+endurance = importlib.import_module("measurements.smu.2terminal.iv_endurance")
+segmented = importlib.import_module("measurements.smu.2terminal.segmented_voltage_sweep")
 
 
 class IVEnduranceTests(TestCase):
@@ -56,15 +58,18 @@ class IVEnduranceTests(TestCase):
 
     def test_segmented_explicit_overrides_reach_acquisition_and_saved_parameters(self):
         before = deepcopy(segmented.PARAMS)
-        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(segmented, 'SMUSession'), \
-             mock.patch.object(segmented, 'run_list_voltage_sweep', return_value=['V1', 'I1']) as sweep, \
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(segmented, 'SMUSession') as connection, \
+             mock.patch.object(segmented, 'execute_and_wait'), \
+             mock.patch.object(segmented, 'raise_for_kxci_error'), \
+             mock.patch.object(segmented, 'connect_smus_to_probes', return_value=()), \
              mock.patch.object(segmented, 'retrieve_variables', return_value=pd.DataFrame({'V1':[0,1,0], 'I1':[0,1e-6,0], 'V2':[0,0,0], 'I2':[0,-1e-6,0]})), \
              mock.patch.object(segmented, 'save_workbook') as save, \
              mock.patch.object(segmented, 'save_current_density_plots', return_value=(Path(tmp)/'j.png', Path(tmp)/'log.png')):
             result = segmented.run_test({'sweep_delay': .123}, turning_points=[0,1,0],
-                segment_step=1, save_dir=tmp, inst='offline', device_area_cm2=1e-4)
-            self.assertEqual(sweep.call_args.kwargs['values'], [0,1,0])
-            self.assertEqual(sweep.call_args.kwargs['sweep_delay'], .123)
+                segment_step=1, save_dir=tmp, inst='offline', device_area_cm2=1e-4, preview_only=False)
+            commands = [call.args[0] for call in connection.return_value.__enter__.return_value.query.call_args_list]
+            self.assertIn('VL1,1,0.0001,0,1,0', commands)
+            self.assertIn('DT 0.123', commands)
             self.assertEqual(save.call_args.args[2]['TURNING_POINTS'], [0,1,0])
             self.assertEqual(save.call_args.args[2]['DEVICE_AREA_CM2'], 1e-4)
             self.assertEqual(result['point_count'], 3)

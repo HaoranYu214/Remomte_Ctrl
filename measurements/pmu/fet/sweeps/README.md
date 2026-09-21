@@ -1,27 +1,29 @@
-# FET parameter sweeps
+# FeFET parameter sweeps
 
 [English](#english) | [中文](#中文)
 
 ## English
 
-- [delay_sweep.py](delay_sweep.py): calls the base bipolar program/read test for each DELAY_TIMES value, programs the device again, and summarizes Id versus delay.
-- [read_bias_delay_sweep.py](read_bias_delay_sweep.py): sweeps Vg, Vd, and delay, adds repeated program/read tests for each Vg/Vd pair, and calculates state-separation metrics and rankings.
+Both runners call [bipolar_program_read.py](../bipolar_program_read.py) with per-run overrides.
 
-Both call [bipolar_program_read.py](../bipolar_program_read.py), inheriting its write voltages, positive/negative repetition counts, and cycle count. These are not continuous readbacks of a single programmed state, and each delay need not produce only one pair of readings.
+| Entry | Grid and outputs |
+|---|---|
+| [delay_sweep.py](delay_sweep.py) | DELAY_TIMES; summary and current-versus-delay plots |
+| [read_bias_delay_sweep.py](read_bias_delay_sweep.py) | VG_READ_VALUES × VD_READ_VALUES × DELAY_TIMES; state-window/contrast rankings, plots and FEFET_REPEAT_N/T repetitions |
 
-DELAY_TIMES values above 1 s use the base entry's software-wait branch; the actual interval includes reconfiguration overhead. VG_READ_VALUES/VD_READ_VALUES must also respect the PMU voltage range and the device's allowable read conditions.
+Set the base entry to acquisition mode before launching these measurement runners. They inherit write conditions, repeat/cycle counts, hardware, output root and floating-Gate options. Every grid point programs again, and inherited repetitions can yield more than one positive/negative pair.
 
-Parameter source: [manual limits and mode reference (Chinese)](../../../../reference/manuals/PARAMETER_LIMITS.md).
+Delays must be positive. Above 1 s the base test uses a host-wait branch with configuration overhead. Select read biases within the instrument and device limits. See the [base guide](../README.md) for ordering, floating Gate and saved data.
 
 ## 中文
 
-### FET 参数扫描
+两个执行器均通过按次覆盖调用 [bipolar_program_read.py](../bipolar_program_read.py)。
 
-- [delay_sweep.py](delay_sweep.py)：逐个 DELAY_TIMES 调用基础正负写读测试，每次重新写入，汇总 Id 随等待时间的变化。
-- [read_bias_delay_sweep.py](read_bias_delay_sweep.py)：组合扫描 Vg、Vd、delay，并对每组 Vg/Vd 追加重复写读，再生成状态区分指标及排序。
+| 入口 | 网格及输出 |
+|---|---|
+| [delay_sweep.py](delay_sweep.py) | DELAY_TIMES；汇总及电流随等待时间变化图 |
+| [read_bias_delay_sweep.py](read_bias_delay_sweep.py) | VG_READ_VALUES × VD_READ_VALUES × DELAY_TIMES；状态窗口/对比度排名、绘图及 FEFET_REPEAT_N/T 重复测试 |
 
-两者调用 [bipolar_program_read.py](../bipolar_program_read.py)，写入电压、正负重复次数、循环次数继承自该入口。扫描不是对同一次写入状态持续读回；不应把每个 delay 自动理解为只有一对数据。
+启动这些实测入口前，将基础入口设为采集模式。写入条件、重复/循环次数、硬件、输出根目录和浮栅选项均继承基础设置。每个网格点重新写入，继承的重复次数可能产生多对正负读数。
 
-DELAY_TIMES > 1 s 会走基础入口的软件等待分支；精确间隔还含重配置开销。VG_READ_VALUES/VD_READ_VALUES 同样受 PMU 电压档和器件允许读取条件限制。
-
-参数依据：[手册限制与模式速查](../../../../reference/manuals/PARAMETER_LIMITS.md)。
+等待时间必须为正；超过 1 s 时基础测试使用主机等待分支，实际时间包含重配置开销。读偏置需符合仪器和器件限制。执行顺序、浮栅及输出见[基础指南](../README.md)。

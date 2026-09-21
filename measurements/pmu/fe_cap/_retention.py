@@ -1,7 +1,8 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读说明：retentionPV/retentionPUND 的共用执行辅助文件，不是独立实验入口。
-# 实验参数和波形在两个入口中修改；这里负责检查、配置、等待、执行和原始数据保存。
-# prepare_stage/execute_plan 使用调用者的仪器连接；preview_plan 只做离线绘图。
+# Shared execution support for retentionPV/retentionPUND; not a standalone experiment entry.
+# Edit parameters and waveforms in the two entries; this module validates, configures, waits, executes and saves raw data.
+# prepare_stage/execute_plan use the caller's connection; preview_plan only draws offline plots.
 
 """Local execution support for the two retention entries; no waveform design."""
 
@@ -18,7 +19,7 @@ from keithley4200.pmu.pmu_tests import (
 )
 
 
-# 在连接仪器或预留输出文件前检查所有阶段的波形、通道和参数。
+# Validate all stage waveforms, channels and settings before connecting or reserving output files.
 def validate_plan(plan, channels, params):
     """Check every stage before opening a session or reserving output files."""
     if len(set(channels)) != 2:
@@ -56,7 +57,7 @@ def validate_plan(plan, channels, params):
                 raise ValueError("Each output-off execution must start and end at 0 V.")
 
 
-# 通过已有连接在输出关闭时配置下一阶段，供后续等待到期后执行。
+# Configure the next stage through an existing connection with outputs off, ready for execution after the wait.
 def prepare_stage(query, configs, channels, params, options):
     """Configure with outputs off, before waiting for the next deadline."""
     query(":PMU:INIT 1")
@@ -70,8 +71,8 @@ def prepare_stage(query, configs, channels, params, options):
         query(f":PMU:OUTPUT:STATE {channel}, 1")
 
 
-# 按计划配置并执行各阶段，在阶段间关闭输出并由主机计时等待。
-# 更新 frames/timing；记录的时序是主机估计值，不是仪器实测脉冲时间。
+# Configure and execute each planned stage, disabling outputs and waiting on the host between stages.
+# Update frames/timing; recorded times are host estimates, not instrument-measured pulse timestamps.
 def execute_plan(query, plan, channels, params, options, frames, timing,
                  *, clock=time.perf_counter, sleep=time.sleep, poll_s=0.005,
                  timeout_s=30.0):
@@ -152,7 +153,7 @@ def execute_plan(query, plan, channels, params, options, frames, timing,
     return tuple(pd.concat(frames[ch], ignore_index=True) for ch in channels)
 
 
-# 将已获取的原始数据、阶段计时和参数保存到工作簿，支持失败或中断后的记录。
+# Save acquired raw data, stage timing and parameters, including partial results after failure or interruption.
 def save_raw(path, frames, timing, parameters):
     """Checkpoint raw data before analysis, including interrupted/failed runs."""
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
@@ -163,7 +164,7 @@ def save_raw(path, frames, timing, parameters):
         parameters.to_excel(writer, sheet_name="Parameters", index=False)
 
 
-# 离线画出双通道执行阶段与等待间隔；输出关闭期间不假定器件电压。
+# Preview both channels and wait intervals; do not assume a DUT voltage while outputs are off.
 def preview_plan(plan, channel, *, show=True, compress_delay=True, title_prefix="Retention"):
     """Preview both channels; output-off gaps have no assigned DUT voltage."""
     import matplotlib.pyplot as plt

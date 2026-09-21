@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Small parameter-copy helpers; pulse design stays in measurement scripts."""
 from copy import deepcopy
 

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """FTJ waveform and workflow coverage using direct function calls."""
 from copy import deepcopy
 from importlib import reload

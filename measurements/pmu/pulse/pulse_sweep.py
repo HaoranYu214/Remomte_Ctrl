@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：普通扫幅脉冲串；先改 params、INST、CH1/CH2、TEST_MODE 和 SAVE_DIR。
-# 流程：main → run_dual_channel_sweep_train 配置/执行 → 读回并关闭输出 → 保存并显示图。
-# main 直接实测；TEST_MODE 是采集模式，不是 PREVIEW_ONLY，0 也不表示离线预览。
+# Start here: standard amplitude-swept pulse trains; edit params, INST, CH1/CH2, TEST_MODE and SAVE_DIR.
+# Flow: main -> run_dual_channel_sweep_train configures/executes -> read/disable outputs -> save/display plots.
+# main acquires data; TEST_MODE selects acquisition mode, not preview, and 0 does not mean offline.
 
 """Two-channel sweep plus pulse-train test."""
 
@@ -27,7 +28,7 @@ from keithley4200.pmu.data_processing import (
     save_channels_separate_excel,
     select_pulse_iv_level,
 )
-from keithley4200.pmu.plotting_utils import PlotManager, plot_time_series
+from keithley4200.pmu.plotting import PlotManager, plot_time_series
 from keithley4200.pmu.pmu_tests import (
     _apply_common_pmu_options,
     _configure_pulse_iv_acquisition,
@@ -37,7 +38,7 @@ from keithley4200.pmu.pmu_tests import (
 from keithley4200.pmu.session import PMUSession
 
 
-# 通过已有 query 连接配置并执行双通道扫幅脉冲串；采集模式由 mode 指定。
+# Configure and execute two-channel amplitude-swept pulse trains through the existing connection; mode selects acquisition.
 def run_dual_channel_sweep_train(query, ch1, ch2, parameters, mode="D"):
     """Configure and run this entry's sweep-plus-pulse-train waveform."""
     mode_number = _get_mode_num(mode)
@@ -147,13 +148,13 @@ params = dict(
     RES_MAX=1e15,
 )
 TEST_MODE = 2
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 CH1, CH2 = 1, 2
 RESISTANCE_SCALE = "linear"
-SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\FTJ\Refined")
+SAVE_DIR = Path("data/pmu/pulse/pulse_sweep")
 
-# 连接 PMU，配置并执行双通道脉冲，读回数据、关闭输出，保存 Excel 并显示结果图。
-# TEST_MODE 控制采集方式，不是离线预览开关。
+# Connect to the PMU, configure/execute both channels, read data, disable outputs, save Excel and display plots.
+# TEST_MODE selects acquisition behavior; it is not an offline preview switch.
 def main():
     """Run the configured measurement only when explicitly invoked."""
     SAVE_DIR.mkdir(parents=True, exist_ok=True)

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Explicit SMU-to-probe routing for systems fitted with 4225-RPMs.
 
 Runnable experiments describe each physical connection with a mapping such as::

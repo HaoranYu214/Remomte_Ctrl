@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Shared PyVISA transport for 4200A-SCS PMU and SMU control.
 
 The vendor ``instrcomms.py`` example is kept unchanged under ``reference``.
