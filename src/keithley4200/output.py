@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Short, grouped output names and atomic reservations for measurement runs.
 
 Reserve ONCE per acquisition, then append .xlsx / _i2.png / ... to that stem.
@@ -132,11 +133,12 @@ def reserve_summary_stem(directory, label="summary"):
     return reserve_output_stem(directory, f"{label}_{stamp}"), run_time
 
 
-def save_summary_workbook(rows, path, *, sheet_name="Summary"):
-    """Update one Excel summary atomically, retaining its previous good version.
+def save_atomic_workbook(sheets, path):
+    """Write sheet-name/DataFrame pairs, replacing the target only on success.
 
-    Use the same reserved path after each stage and at completion; no CSV
-    companion is created. Callers supply summary fields without output paths.
+    The temporary workbook lives beside the destination for atomic replacement.
+    On writing or replacement failure, the old workbook is retained and the
+    temporary file is removed. Callers own sheet layouts and parameter metadata.
     """
     import os
     import tempfile
@@ -144,13 +146,25 @@ def save_summary_workbook(rows, path, *, sheet_name="Summary"):
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    frame = rows if isinstance(rows, pd.DataFrame) else pd.DataFrame(rows)
     handle, temporary = tempfile.mkstemp(prefix=f".{path.stem}_", suffix=".xlsx", dir=path.parent)
     os.close(handle)
     try:
-        frame.to_excel(temporary, sheet_name=sheet_name, index=False, engine="openpyxl")
+        # Own the handle so a failed first sheet cannot leak it on Windows.
+        # Only finalize the workbook after all sheets were written successfully.
+        with open(temporary, "wb") as handle:
+            writer = pd.ExcelWriter(handle, engine="openpyxl")
+            for name, frame in sheets.items():
+                frame.to_excel(writer, sheet_name=name, index=False)
+            writer.close()
         os.replace(temporary, path)
     finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
+        Path(temporary).unlink(missing_ok=True)
     return path
+
+
+def save_summary_workbook(rows, path, *, sheet_name="Summary"):
+    """Update one summary atomically, retaining its previous good version."""
+    import pandas as pd
+
+    frame = rows if isinstance(rows, pd.DataFrame) else pd.DataFrame(rows)
+    return save_atomic_workbook({sheet_name: frame}, path)

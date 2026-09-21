@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Flat entrypoints keep waveform ownership local and execute without adapters."""
 import ast
 from contextlib import ExitStack, redirect_stdout

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Check tools imports and CLI bootstrapping outside the repository cwd."""
 import os
 from pathlib import Path
@@ -17,10 +18,10 @@ class ToolsPackageTests(unittest.TestCase):
                 [sys.executable, "-c",
                  "import sys; from pathlib import Path; "
                  "sys.path.insert(0,sys.argv[1]); "
-                 "from keithley4200.tools import dry_run, waveform_preview; "
+                 "from keithley4200.tools import dry_run; from keithley4200.pmu import preview; "
                  "assert dry_run.REPO_ROOT == Path(sys.argv[2]); "
                  "assert dry_run.DEFAULT_SCRIPT.is_file(); "
-                 "assert callable(waveform_preview.preview_sequence_configs)",
+                 "assert callable(preview.preview_sequence_configs)",
                  str(SRC), str(ROOT)],
                 cwd=tmp, capture_output=True, text=True, timeout=30,
             )

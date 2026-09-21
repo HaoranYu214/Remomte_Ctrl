@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """4200A-SCS SMU User Mode spot-source and measurement helpers."""
 
 from __future__ import annotations

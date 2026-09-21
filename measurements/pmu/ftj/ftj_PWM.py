@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：ftj_PWM；先改本文件的 INST、CH1/CH2、params、CURRENT_RANGES 和 SAVE_DIR。
-# 流程：run_test 合并本次参数 → build_waveform 构造波形 → PMU 执行/读回 → 整理并保存结果。
-# PREVIEW_ONLY=True 时只预览；run_test 的显式参数优先于文件默认值。
-# 查看波形定义从 build_waveform 开始；一般改实验条件不需要修改下方辅助函数。
+# Start here: ftj_PWM; edit INST, CH1/CH2, params, CURRENT_RANGES and SAVE_DIR.
+# Flow: run_test merges parameters -> build_waveform -> PMU execution/readout -> process and save results.
+# PREVIEW_ONLY=True previews only; explicit run_test arguments override file defaults.
+# Read build_waveform for waveform definitions; routine parameter changes do not require editing helpers below.
 
 """FTJ pulse-width-modulation (PWM) experiment using true width sweep.
 
@@ -33,7 +34,7 @@ for path in (SRC_ROOT, REPO_ROOT):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from keithley4200.tools.waveform_preview import preview_sequence_configs
+from keithley4200.pmu.preview import preview_sequence_configs
 from keithley4200.output import measurement_name, reserve_output_stem, time_tag, saved_at, voltage_tag
 from keithley4200.pmu.data_processing import read_both_channels
 from keithley4200.pmu.pmu_tests import (
@@ -46,9 +47,9 @@ from keithley4200.pmu.session import PMUSession
 from keithley4200.measurement_parameters import merge_parameters, remap_channel_options
 
 
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 CH1, CH2 = 1, 2
-SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\06-07-2026\03C6\L40um6\PWM")
+SAVE_DIR = Path("data/pmu/ftj/ftj_PWM")
 FILE_STEM = "PWM"
 
 CURRENT_RANGES = {CH1: 1e-4, CH2: 1e-4}
@@ -82,7 +83,7 @@ params = {
 PREVIEW_ONLY = False
 SAVE_WAVEFORM_PREVIEW = False
 
-# 把一个波形块的电压、时间和采集窗口追加到已有序列数组；原地修改 target。
+# Append one block's voltages, times and acquisition windows to sequence arrays; modifies target in place.
 def append_block(target, start_v, stop_v, time_values, meas_types, meas_start, meas_stop):
     target["start_v"].extend(start_v)
     target["stop_v"].extend(stop_v)
@@ -91,7 +92,7 @@ def append_block(target, start_v, stop_v, time_values, meas_types, meas_start, m
     target["meas_start"].extend(meas_start)
     target["meas_stop"].extend(meas_stop)
 
-# 创建各字段均为空列表的序列容器，供逐块拼接波形。
+# Create a sequence container with an empty list for each field.
 def make_empty_sequence_accumulator():
     return {
         "start_v": [],
@@ -102,7 +103,7 @@ def make_empty_sequence_accumulator():
         "meas_stop": [],
     }
 
-# 复制展开指定次数的波形，仅供预览和导出，不改变硬件循环配置。
+# Expand waveform repeats for preview/export only, leaving hardware loop settings unchanged.
 def expand_config_for_preview(config, repeat_count, *, seq_id=0):
     """Return a repeated copy for preview/export-only waveform tracing."""
     start_v = []
@@ -122,7 +123,7 @@ def expand_config_for_preview(config, repeat_count, *, seq_id=0):
 
     return (seq_id, start_v, stop_v, time_values, meas_types, meas_start, meas_stop)
 
-# 向时间—电压端点列表追加一个波形块，用于重建指令波形图。
+# Append a waveform block to time/voltage endpoints for reconstructing commanded-waveform plots.
 def _extend_trace_points(points, start_v, stop_v, time_values, start_time, *, add_gap=True):
     """Append t-V endpoint pairs for one waveform block."""
     cursor = start_time
@@ -136,8 +137,8 @@ def _extend_trace_points(points, start_v, stop_v, time_values, start_time, *, ad
     return cursor
 
 
-# 根据 parameters 和 channels 生成本次波形配置、执行顺序及关联信息。
-# 返回供测量和预览共用的字典；只计算波形，不连接仪器。
+# Build this run's waveform configurations, execution order and metadata from parameters and channels.
+# Return a dictionary shared by acquisition and preview; waveform construction does not connect to hardware.
 def build_waveform(*, parameters=None, channels=None):
     """Build pulse arrays and execution metadata from this run's parameters."""
     parameters = params if parameters is None else parameters
@@ -219,7 +220,7 @@ def build_waveform(*, parameters=None, channels=None):
     }
 
 
-# 返回从基线到目标电压再回到基线的脉冲段数组，供组装完整序列。
+# Return pulse segments from baseline to target voltage and back, for sequence assembly.
 def build_pulse_block(level, trf, dwell, idle, *, base_v):
     """Return a 4-segment base -> absolute target -> base pulse block."""
     start_v = [base_v, level, level, base_v]
@@ -228,7 +229,7 @@ def build_pulse_block(level, trf, dwell, idle, *, base_v):
     return start_v, stop_v, time_values
 
 
-# 生成正脉宽扫描后接负脉宽扫描的序列；每个写脉冲后安排读回。
+# Build a positive-width sweep followed by a negative-width sweep, with a read after each program pulse.
 def make_pwm_sequence(
     seq_id,
     *,
@@ -303,7 +304,7 @@ def make_pwm_sequence(
     return ch1_config, ch2_config, steps
 
 
-# 检查生成的序列配置是否符合本脚本要求，在发送到 PMU 前发现参数错误。
+# Validate generated sequence configurations against this script's requirements before sending them to the PMU.
 def validate_sequence_configs(
     configs_by_channel,
     seq_list_by_channel,
@@ -354,7 +355,7 @@ def validate_sequence_configs(
             raise ValueError(f"CH{channel} SEQ_LIST references missing seq IDs: {missing_seq_ids}")
 
 
-# 根据本次参数生成波形图；不连接仪器，指定 output_path 时保存预览图片。
+# Build the waveform plot without hardware access; save it when output_path is supplied.
 def preview_waveform(
     output_path=None,
     *,
@@ -379,7 +380,7 @@ def preview_waveform(
     )
 
 
-# 把指令波形整理成时间—电压表，供导出和绘图；它不是仪器采集数据。
+# Export commanded waveforms as time/voltage tables; these are not acquired instrument data.
 def build_waveform_trace_table(*, channels=None, parameters=None, waveform=None):
     """Return one wide t-V table for plotting write/read command waveforms."""
     parameters = params if parameters is None else parameters
@@ -417,7 +418,7 @@ def build_waveform_trace_table(*, channels=None, parameters=None, waveform=None)
     return pd.DataFrame({name: pd.Series(values) for name, values in trace_columns.items()})
 
 
-# 把原始通道数据与写入条件对齐，返回逐读点的结果表。
+# Align raw channel data with program conditions and return a per-read-point result table.
 def build_readback_table(df_ch1, df_ch2, *, channels=None, parameters=None, waveform=None):
     """Return one readback row per commanded PWM width."""
     parameters = params if parameters is None else parameters
@@ -455,9 +456,9 @@ def build_readback_table(df_ch1, df_ch2, *, channels=None, parameters=None, wave
     return pwm_df
 
 
-# 合并 params_override 并生成波形，执行固定写电压下的脉宽扫描与读回。
-# preview_only=True 时只预览；实测返回数据及输出路径，save_results 控制结果文件保存。
-# 未覆盖参数沿用本文件默认值；电流量程和通道可通过关键字参数单独指定。
+# Merge params_override and execute a pulse-width sweep at fixed program voltage with readback.
+# preview_only=True previews only; acquisition returns data and paths; save_results controls file output.
+# Unspecified settings use local defaults; current ranges and channels have separate keyword overrides.
 def run_test(
     params_override=None,
     *,

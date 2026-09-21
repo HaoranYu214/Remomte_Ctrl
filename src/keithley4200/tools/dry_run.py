@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 r"""Generic dry-run runner for PMU test scripts.
 
 Usage:

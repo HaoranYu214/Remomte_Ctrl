@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Repository-level plot helpers for saved SMU sweep data."""
 
 from __future__ import annotations
@@ -89,3 +90,33 @@ def save_current_density_plots(
     plt.close(fig)
 
     return jv_path, log_path
+
+
+# Save linear Id, log(abs(Id)) and Ig plots for completed curves, preserving acquisition order.
+def save_fet_plot(data, path, *, sweep_terminal, show=False):
+    import matplotlib.pyplot as plt
+    x = "VGS" if sweep_terminal == "gate" else "VDS"
+    bias = "CommandedVDS_V" if sweep_terminal == "gate" else "CommandedVGS_V"
+    bias_label = "VDS" if sweep_terminal == "gate" else "VGS"
+    fig, axes = plt.subplots(1, 3, figsize=(14, 4.5))
+    for _, curve in data.groupby("CurveIndex", sort=False):
+        label = f"{bias_label}={curve[bias].iloc[0]:g} V"
+        axes[0].plot(curve[x], curve["ID"], label=label)
+        axes[1].plot(curve[x], curve["ID"].abs().where(curve["ID"] != 0), label=label)
+        axes[2].plot(curve[x], curve["IG"], label=label)
+    if (data["ID"].abs() > 0).any():
+        axes[1].set_yscale("log")
+    else:
+        axes[1].text(0.5, 0.5, "All ID values are zero", transform=axes[1].transAxes, ha="center")
+    for ax, label in zip(axes, ("ID (A)", "abs(ID) (A)", "IG (A)")):
+        ax.set(xlabel=x + " (V)", ylabel=label)
+        ax.grid(True, which="both", alpha=0.3)
+        ax.legend()
+    fig.tight_layout()
+    try:
+        fig.savefig(path, dpi=200)
+        if show:
+            plt.show()
+    finally:
+        plt.close(fig)
+    return Path(path)

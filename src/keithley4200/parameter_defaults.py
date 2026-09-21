@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Persist accepted PMU ranges without rewriting unrelated source code."""
 import ast
 import math

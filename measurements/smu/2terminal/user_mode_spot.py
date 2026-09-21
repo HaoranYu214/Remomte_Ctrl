@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：SMU 单点 I–V；先改 INST、CHANNEL、SOURCE_VOLTAGE、CURRENT_COMPLIANCE 和接线。
-# 流程：main → 初始化 User Mode → 施加电压 → 等待/读电流 → 打印结果 → 关闭源并恢复路由。
-# SETTLE_TIME_S 是读前等待，DEVICE_AREA_CM2 用于计算电流密度；本入口不自动保存文件。
+# Entry: SMU spot I-V; edit INST, CHANNEL, SOURCE_VOLTAGE, CURRENT_COMPLIANCE, and wiring.
+# Flow: main -> initialize User Mode -> force voltage -> wait/read current -> print -> turn off source and restore routing.
+# SETTLE_TIME_S is the wait before reading; DEVICE_AREA_CM2 converts current density. This entry does not save files.
 
 """User Mode spot I-V example with explicit compliance and shutdown."""
 
 from pathlib import Path
 import sys
 import time
+import operator
 
 REPO_ROOT = next(
     parent for parent in Path(__file__).resolve().parents
@@ -20,16 +22,15 @@ for path in (SRC_ROOT, REPO_ROOT):
         sys.path.insert(0, str(path))
 
 from keithley4200.smu.session import SMUSession
+from keithley4200.smu.common import validate_channel, raise_for_kxci_error
 from keithley4200.smu.user_mode import (
     initialize_user_mode,
     measure_current,
-    power_off_voltage_source,
     restore_user_mode_rpms,
-    source_voltage,
 )
 
 
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 DEVICE_AREA_CM2 = (20e-4) ** 2
 CHANNEL = 1
 SOURCE_VOLTAGE = 0.1
@@ -46,11 +47,15 @@ SMU_CONNECTIONS = {
 }
 
 
-# 连接 SMU 施加 SOURCE_VOLTAGE，等待后读电流并打印电流密度，最后关闭源并恢复路由。
-# 此入口只在终端打印单点结果，不保存工作簿。
+# Force SOURCE_VOLTAGE, wait, read current, print current density, then turn off the source and restore routing.
+# Print the spot result to the terminal without saving a workbook.
 def main():
     if DEVICE_AREA_CM2 <= 0:
         raise ValueError("DEVICE_AREA_CM2 must be positive.")
+    validate_channel(CHANNEL)
+    range_code = operator.index(VOLTAGE_RANGE_CODE)
+    if range_code not in range(6):
+        raise ValueError("Voltage range code must be 0..5.")
     with SMUSession(INST) as session:
         query = session.query
         rpm_targets = initialize_user_mode(
@@ -59,13 +64,9 @@ def main():
             smu_connections=SMU_CONNECTIONS,
         )
         try:
-            source_voltage(
-                query,
-                CHANNEL,
-                SOURCE_VOLTAGE,
-                CURRENT_COMPLIANCE,
-                range_code=VOLTAGE_RANGE_CODE,
-            )
+            # DV: channel, voltage-source range (0=auto), voltage (V), and current compliance (A).
+            query(f"DV{CHANNEL}, {range_code}, {SOURCE_VOLTAGE}, {CURRENT_COMPLIANCE}")
+            raise_for_kxci_error(query, context="Spot voltage setup")
             time.sleep(SETTLE_TIME_S)
             current = measure_current(query, CHANNEL)
             current_density = current / DEVICE_AREA_CM2
@@ -76,7 +77,7 @@ def main():
         finally:
             # Do not restore an RPM relay unless DV shutdown succeeds. If
             # shutdown raises, leave the RPM blue/SMU-routed for safe diagnosis.
-            power_off_voltage_source(query, CHANNEL)
+            query(f"DV{CHANNEL}")  # DV without arguments turns off the voltage source.
             restore_user_mode_rpms(query, rpm_targets)
 
 

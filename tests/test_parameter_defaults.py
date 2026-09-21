@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Source persistence changes only accepted current-range defaults."""
 import ast
 from pathlib import Path

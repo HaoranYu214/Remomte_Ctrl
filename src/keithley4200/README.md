@@ -1,62 +1,53 @@
-# Shared Keithley source library
+# Shared measurement library
 
 [English](#english) | [中文](#中文)
 
 ## English
 
-The reusable instrument code is divided by hardware command family:
+Keep reusable mechanisms here and experiment definitions in [measurements](../../measurements/README.md).
 
-- `pmu/`: 4225-PMU sessions, Segment Arb execution, data processing,
-  current-range helpers, plotting, and shared FET pulse helpers.
-- `smu/`: SMU System Mode, User Mode, RPM routing, data processing, plotting,
-  and sessions.
-- `transport.py`: the single shared PyVISA communication implementation used
-  by both packages.
+| Responsibility | PMU | SMU |
+|---|---|---|
+| Connection and cleanup | pmu/session.py | smu/session.py |
+| Command support | pmu/pmu_tests.py | smu/system_mode.py, user_mode.py, routing.py |
+| Readout and processing | pmu/data_processing.py | smu/data_processing.py |
+| Offline preview | pmu/preview.py: time, segments, windows, SSR | smu/preview.py: point index and channel voltages |
+| Measured plots | pmu/plotting.py | smu/plotting.py |
+| Shared specialization | FET pulse execution, timing and current ranges | smu/points.py and smu/fet.py |
 
-Runnable experiment parameters and waveforms remain outside `src`; this
-directory contains reusable mechanisms rather than experiment protocols.
+The two previews have different axes and inputs. Plotting modules handle measured results. smu/fet.py only validates FET plans and saves family checkpoints; it does not hide the sweep commands.
 
-## Other shared modules
+Package-wide helpers:
 
-- [output.py](output.py): shared filename labels, atomic run-number reservations, and summary timestamps.
-- [tools](tools/README.md): waveform previews and dry-run helpers, included in the installed package.
+- [transport.py](transport.py): shared PyVISA communication.
+- [output.py](output.py): labels, output-group reservations, timestamps and atomic workbook saving.
+- [measurement_parameters.py](measurement_parameters.py): copy/merge run settings and remap channel options.
+- [parameter_defaults.py](parameter_defaults.py): persist accepted current-range literals while preserving other source settings.
+- [tools](tools/README.md): PMU dry-run command-line tool.
 
-__init__.py marks an importable package and normally does not need to be run directly. Experiment entries combine these shared capabilities, while measurements owns the experiment-specific waveforms.
-
-Parameter source: [manual limits and mode reference (Chinese)](../../reference/manuals/PARAMETER_LIMITS.md).
-
-
-Parameter API: [standalone and workflow configuration](../../measurements/pmu/README.md#standalone-and-workflow-configuration).
-
-
-### Parameter helpers
-
-- [measurement_parameters.py](measurement_parameters.py): copy/merge run overrides and remap channel-specific options; it does not define experiment classes.
-- [parameter_defaults.py](parameter_defaults.py): update only accepted current-range literals in source defaults while retaining comments and other settings.
+See [PMU](pmu/README.md) and [SMU](smu/README.md) for boundaries and limitations. Current imports use pmu.preview and pmu.plotting; update personal scripts still using tools.waveform_preview or pmu.plotting_utils.
 
 ## 中文
 
-### Keithley 公共源码库
+这里保留公共机制，实验定义放在 [measurements](../../measurements/README.md)。
 
-公共代码按仪器命令族分组：
+| 职责 | PMU | SMU |
+|---|---|---|
+| 连接与清理 | pmu/session.py | smu/session.py |
+| 命令支持 | pmu/pmu_tests.py | smu/system_mode.py、user_mode.py、routing.py |
+| 读取与处理 | pmu/data_processing.py | smu/data_processing.py |
+| 离线预览 | pmu/preview.py：时间、分段、测量窗、SSR | smu/preview.py：点序号与各通道电压 |
+| 实测绘图 | pmu/plotting.py | smu/plotting.py |
+| 专用公共能力 | FET 脉冲执行、时间和电流量程 | smu/points.py、smu/fet.py |
 
-- pmu/：4225-PMU 会话、Segment Arb 执行、处理、量程辅助、绘图及 FET 通用执行辅助。
-- smu/：SMU System/User Mode、RPM 路由、处理、绘图及会话。
-- transport.py：PMU 与 SMU 共用的 PyVISA 通信实现。
+两种预览的横轴和输入不同；plotting 模块负责实测结果。smu/fet.py 只校验 FET 计划和保存曲线族检查点，不封装整套扫描命令。
 
-可运行实验的参数和波形保留在 src 外；此处实现公共机制，实验协议由 measurements 定义。
+跨仪器公共模块：
 
-## 其他公共模块
-- [output.py](output.py)：统一文件标签、原子占号和汇总时间。
-- [tools](tools/README.md)：波形预览与 dry-run，已包含在安装包内。
+- [transport.py](transport.py)：PyVISA 通信。
+- [output.py](output.py)：文件标签、输出组占号、时间戳和工作簿原子保存。
+- [measurement_parameters.py](measurement_parameters.py)：复制、合并单次配置，重映射通道选项。
+- [parameter_defaults.py](parameter_defaults.py)：回写接受的电流档字面量，保留其他源码设置。
+- [tools](tools/README.md)：PMU dry-run 命令行工具。
 
-__init__.py 标记可导入的包；一般不需要直接运行。实验入口只组合这些公共能力，具体波形仍由 measurements 定义。
-
-参数依据：[手册限制与模式速查](../../reference/manuals/PARAMETER_LIMITS.md)。
-
-### 参数辅助
-
-- [measurement_parameters.py](measurement_parameters.py)：复制/合并单次参数并重映射通道选项，不定义实验类。
-- [parameter_defaults.py](parameter_defaults.py)：仅回写接受的电流档数值，保留注释和其他设置。
-
-参数接口：[独立运行与工作流配置](../../measurements/pmu/README.md#独立运行与工作流配置)。
+具体边界见 [PMU](pmu/README.md) 和 [SMU](smu/README.md)。当前导入使用 pmu.preview、pmu.plotting；个人脚本若仍使用 tools.waveform_preview、pmu.plotting_utils，需要更新。

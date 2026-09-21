@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：ftj_ISPP_V1；先改本文件的 INST、CH1/CH2、params、CURRENT_RANGES 和 SAVE_DIR。
-# 流程：run_test 合并本次参数 → build_waveform 构造波形 → PMU 执行/读回 → 整理并保存结果。
-# PREVIEW_ONLY=True 时只预览；run_test 的显式参数优先于文件默认值。
-# 查看波形定义从 build_waveform 开始；一般改实验条件不需要修改下方辅助函数。
+# Start here: ftj_ISPP_V1; edit INST, CH1/CH2, params, CURRENT_RANGES and SAVE_DIR.
+# Flow: run_test merges parameters -> build_waveform -> PMU execution/readout -> process and save results.
+# PREVIEW_ONLY=True previews only; explicit run_test arguments override file defaults.
+# Read build_waveform for waveform definitions; routine parameter changes do not require editing helpers below.
 
 """FTJ ISPP V1: one write sequence per voltage, followed by a common read."""
 
@@ -30,12 +31,12 @@ from keithley4200.pmu.pmu_tests import (
 )
 from keithley4200.pmu.session import PMUSession
 from keithley4200.measurement_parameters import merge_parameters, remap_channel_options
-from keithley4200.tools.waveform_preview import preview_sequence_configs
+from keithley4200.pmu.preview import preview_sequence_configs
 
 
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 CH1, CH2 = 1, 2
-SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\07-07-2026\FTJ")
+SAVE_DIR = Path("data/pmu/ftj/ftj_ISPP_V1")
 FILE_STEM = "ISPP1"
 
 CURRENT_RANGES = {CH1: 1e-5, CH2: 1e-5}
@@ -70,7 +71,7 @@ WRITE_POSITIVE_SEQ_START_ID = 2
 PREVIEW_ONLY = True
 
 
-# 生成含端点的等间隔写入电压列表；steps 为 1 时仅使用 stop。
+# Generate evenly spaced program voltages including endpoints; steps=1 uses only stop.
 def voltage_steps(start, stop, steps):
     if int(steps) <= 0:
         raise ValueError("ISPP step count must be positive.")
@@ -80,8 +81,8 @@ def voltage_steps(start, stop, steps):
     return [float(start) + index * step for index in range(int(steps))]
 
 
-# 根据 parameters 和 channels 生成本次波形配置、执行顺序及关联信息。
-# 返回供测量和预览共用的字典；只计算波形，不连接仪器。
+# Build this run's waveform configurations, execution order and metadata from parameters and channels.
+# Return a dictionary shared by acquisition and preview; waveform construction does not connect to hardware.
 def build_waveform(*, parameters=None, channels=None):
     """Build pulse arrays and execution metadata from this run's parameters."""
     parameters = params if parameters is None else parameters
@@ -149,7 +150,7 @@ def build_waveform(*, parameters=None, channels=None):
     }
 
 
-# 生成两通道共用的读脉冲序列配置，供每次递增写入后重复调用。
+# Build a shared two-channel read sequence for reuse after each incremental program step.
 def make_read_configs(*, base_v, meas_start_read, meas_stop_read, meas_types_read, read_v, time_values_read):
     ch1_start_v = [base_v, base_v, read_v, read_v, base_v]
     ch1_stop_v = [base_v, read_v, read_v, base_v, base_v]
@@ -165,7 +166,7 @@ def make_read_configs(*, base_v, meas_start_read, meas_stop_read, meas_types_rea
     return ch1_config, ch2_config
 
 
-# 为每个写入电压分配序列编号并生成双通道配置，返回两组序列列表。
+# Assign a sequence ID to each program voltage and return sequence configurations for both channels.
 def make_write_configs(
     seq_start_id,
     voltages,
@@ -198,7 +199,7 @@ def make_write_configs(
     return ch1_configs, ch2_configs
 
 
-# 生成执行顺序：每个递增电压的写入序列后紧接一次公共读序列。
+# Build execution order: each incremental program sequence is followed by the shared read sequence.
 def make_ispp_plan(seq_start_id, steps):
     return [
         item
@@ -207,7 +208,7 @@ def make_ispp_plan(seq_start_id, steps):
     ]
 
 
-# 根据本次参数生成波形图；不连接仪器，指定 output_path 时保存预览图片。
+# Build the waveform plot without hardware access; save it when output_path is supplied.
 def preview_waveform(
     output_path=None,
     *,
@@ -230,9 +231,9 @@ def preview_waveform(
     )
 
 
-# 合并 params_override 并生成波形，执行独立写序列与公共读序列交替执行的递增电压测试。
-# preview_only=True 时只预览；实测返回数据及输出路径，save_results 控制结果文件保存。
-# 未覆盖参数沿用本文件默认值；电流量程和通道可通过关键字参数单独指定。
+# Merge params_override and execute incremental programming with alternating individual program and shared read sequences.
+# preview_only=True previews only; acquisition returns data and paths; save_results controls file output.
+# Unspecified settings use local defaults; current ranges and channels have separate keyword overrides.
 def run_test(
     params_override=None,
     *,

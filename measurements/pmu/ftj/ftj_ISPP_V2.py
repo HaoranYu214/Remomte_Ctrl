@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：ftj_ISPP_V2；先改本文件的 INST、CH1/CH2、params、CURRENT_RANGES 和 SAVE_DIR。
-# 流程：run_test 合并本次参数 → build_waveform 构造波形 → PMU 执行/读回 → 整理并保存结果。
-# PREVIEW_ONLY=True 时只预览；run_test 的显式参数优先于文件默认值。
-# 查看波形定义从 build_waveform 开始；一般改实验条件不需要修改下方辅助函数。
+# Start here: ftj_ISPP_V2; edit INST, CH1/CH2, params, CURRENT_RANGES and SAVE_DIR.
+# Flow: run_test merges parameters -> build_waveform -> PMU execution/readout -> process and save results.
+# PREVIEW_ONLY=True previews only; explicit run_test arguments override file defaults.
+# Read build_waveform for waveform definitions; routine parameter changes do not require editing helpers below.
 
 """FTJ ISPP V2: pack each complete voltage ladder into one sequence."""
 
@@ -31,12 +32,12 @@ from keithley4200.pmu.pmu_tests import (
 )
 from keithley4200.pmu.session import PMUSession
 from keithley4200.measurement_parameters import merge_parameters, remap_channel_options
-from keithley4200.tools.waveform_preview import preview_sequence_configs
+from keithley4200.pmu.preview import preview_sequence_configs
 
 
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 CH1, CH2 = 1, 2
-SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\FTJ\ISPP_V2")
+SAVE_DIR = Path("data/pmu/ftj/ftj_ISPP_V2")
 FILE_STEM = "ISPP2"
 
 CURRENT_RANGES = {CH1: 1e-5, CH2: 1e-5}
@@ -71,7 +72,7 @@ MAX_SEGMENTS_PER_SEQ = MAX_SEGMENTS_PER_SEQUENCE
 PREVIEW_ONLY = True
 
 
-# 生成含端点的等间隔写入电压列表；steps 为 1 时仅使用 stop。
+# Generate evenly spaced program voltages including endpoints; steps=1 uses only stop.
 def voltage_steps(start, stop, steps):
     if int(steps) <= 0:
         raise ValueError("ISPP step count must be positive.")
@@ -81,8 +82,8 @@ def voltage_steps(start, stop, steps):
     return [float(start) + index * step for index in range(int(steps))]
 
 
-# 根据 parameters 和 channels 生成本次波形配置、执行顺序及关联信息。
-# 返回供测量和预览共用的字典；只计算波形，不连接仪器。
+# Build this run's waveform configurations, execution order and metadata from parameters and channels.
+# Return a dictionary shared by acquisition and preview; waveform construction does not connect to hardware.
 def build_waveform(*, parameters=None, channels=None):
     """Build pulse arrays and execution metadata from this run's parameters."""
     parameters = params if parameters is None else parameters
@@ -161,7 +162,7 @@ def build_waveform(*, parameters=None, channels=None):
     }
 
 
-# 把一组递增电压的写入—读回脉冲拼成双通道序列，并检查段数上限。
+# Concatenate incremental program/read pulses into two-channel sequences and check segment limits.
 def make_ispp_sequence(
     seq_id,
     voltages,
@@ -216,7 +217,7 @@ def make_ispp_sequence(
     return ch1_config, ch2_config
 
 
-# 根据本次参数生成波形图；不连接仪器，指定 output_path 时保存预览图片。
+# Build the waveform plot without hardware access; save it when output_path is supplied.
 def preview_waveform(
     output_path=None,
     *,
@@ -239,7 +240,7 @@ def preview_waveform(
     )
 
 
-# 返回逐写入电压的时序摘要表，记录极性、读电压、脉宽和起始时刻；不是采集数据。
+# Return commanded timing metadata by program voltage: polarity, read voltage, width and start time; not acquired data.
 def build_waveform_trace_table(*, channels=None, parameters=None, waveform=None):
     parameters = params if parameters is None else parameters
     channels = tuple(channels) if channels is not None else (CH1, CH2)
@@ -264,9 +265,9 @@ def build_waveform_trace_table(*, channels=None, parameters=None, waveform=None)
     return pd.DataFrame(rows)
 
 
-# 合并 params_override 并生成波形，执行正/负极性各自拼接序列的递增电压测试。
-# preview_only=True 时只预览；实测返回数据及输出路径，save_results 控制结果文件保存。
-# 未覆盖参数沿用本文件默认值；电流量程和通道可通过关键字参数单独指定。
+# Merge params_override and execute incremental programming with concatenated sequences for each polarity.
+# preview_only=True previews only; acquisition returns data and paths; save_results controls file output.
+# Unspecified settings use local defaults; current ranges and channels have separate keyword overrides.
 def run_test(
     params_override=None,
     *,

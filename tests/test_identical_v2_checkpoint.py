@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Offline checks for Identical V2 empty reads and interrupted checkpoints."""
 from pathlib import Path
 from types import SimpleNamespace

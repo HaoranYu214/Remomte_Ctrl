@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Shared PMU helpers for two-channel plus grounded-source FET pulse tests."""
 
 from __future__ import annotations
@@ -12,30 +13,6 @@ import pandas as pd
 
 from .data_processing import read_both_channels, read_channel_data
 from .pmu_tests import execute_segARB_test, power_off_outputs
-
-
-def inclusive_values(start, stop, step):
-    """Return an inclusive monotonic sweep without floating-point drift."""
-    start, stop, step = float(start), float(stop), float(step)
-    if step == 0 or (stop - start) * step < 0:
-        raise ValueError("Sweep step must point from start toward stop.")
-    count = int(np.floor((stop - start) / step + 1e-12)) + 1
-    values = start + np.arange(count, dtype=float) * step
-    if not np.isclose(values[-1], stop, rtol=0, atol=1e-12):
-        values = np.append(values, stop)
-    return values
-
-
-def family_commands(gate_values, drain_values):
-    """Return the gate-outer/drain-inner command table used by both modes."""
-    return pd.DataFrame(
-        [
-            {"PointIndex": index, "CommandedVg": vg, "CommandedVd": vd}
-            for index, (vg, vd) in enumerate(
-                (pair for vg in gate_values for pair in ((vg, vd) for vd in drain_values))
-            )
-        ]
-    )
 
 
 def source_smu_on(query, channel, voltage, compliance):

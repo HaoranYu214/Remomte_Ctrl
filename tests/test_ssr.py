@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Optional SSR command, transition, FET and preview regression tests."""
 import os
 os.environ.setdefault("MPLBACKEND", "Agg")
@@ -13,7 +14,7 @@ sys.path[:0] = [str(ROOT / "src"), str(ROOT)]
 from keithley4200.pmu.pmu_tests import configure_segARB_sequence, execute_segARB_test, auto_align_channels
 from keithley4200.pmu.fet_three_terminal_common import read_fet_channels, execute_program_read_with_software_delay
 from keithley4200.tools.dry_run import DryRunState
-from keithley4200.tools.waveform_preview import sequence_configs_to_dataframe, preview_sequence_configs
+from keithley4200.pmu.preview import sequence_configs_to_dataframe, preview_sequence_configs
 from measurements.pmu.fet import program_read as single, bipolar_program_read as bipolar
 
 

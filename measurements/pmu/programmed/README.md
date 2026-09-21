@@ -4,44 +4,58 @@
 
 ## English
 
-| File | Purpose |
+These entries define their own waveforms and sweep plans, sharing PMU execution/analysis.
+
+| Entry | Plan |
 |---|---|
-| [FORC.py](FORC.py) | Executes a separate first-order reversal curve for each reversal voltage |
-| [FORC_1excute.py](FORC_1excute.py) | Combines multiple reversal curves into one SARB execution and separates them for analysis |
-| [NLS_1C_switch.py](NLS_1C_switch.py) | Configurable single NLS program/read test and preview |
-| [NLS_1C_switch_list.py](NLS_1C_switch_list.py) | Calls the single-test entry over Dwell_list × Vsquare_list |
+| [FORC.py](FORC.py) | One execution per reversal voltage |
+| [FORC_1excute.py](FORC_1excute.py) | Multiple reversal curves in one SARB execution, separated for analysis |
+| [NLS_1C_switch.py](NLS_1C_switch.py) | Single NLS write/read and preview |
+| [NLS_1C_switch_list.py](NLS_1C_switch_list.py) | Dwell_list × Vsquare_list through the single entry |
 
-FORC Vmax is relative to offset. The reversal condition -Vmax ≤ Vr < Vmax is an algorithmic constraint. full_sweep_time is scaled to each voltage excursion, so reversal levels close to +Vmax can create very short actual segments. The combined version must also fit a single execution's segment and sampling-point budgets.
+FORC Vmax is relative to offset and requires -Vmax <= Vr < Vmax. full_sweep_time scales with excursion, so reversal levels near +Vmax may yield very short segments. Combined curves must fit the segment/sample budget.
 
-For NLS, Dwell is the square write plateau duration and Vsquare is the write level. MeasureSquare selects whether that part is acquired; disabling acquisition still outputs the pulse.
+Edit each entry's top settings and check its preview behavior before running. NLS Dwell is a plateau duration; Vsquare is the write level.
 
-Parameter source: [manual limits and mode reference (Chinese)](../../../reference/manuals/PARAMETER_LIMITS.md).
+### NLS timing
 
-### Fixed NLS readout interval
+TotalDelay runs from the end of the preset/prepost falling edge to the first half-PUND read rising edge. Dwell is the disturb plateau. Add an unmeasured baseline hold:
 
-`TotalDelay` (seconds, default 0.11) runs from the end of the preset/prepost falling edge to the start of the first half-PUND read rising edge. `Dwell` is the disturb flat-top duration. An unmeasured baseline hold is inserted after the disturb pulse: `PaddingDelay = TotalDelay - 2*Delaytime - 2*Rt_s - Dwell`. The baseline is `offset` (currently 0 V). Both existing waits and disturb edges count toward the total; `Delaytime` between the two half-PUND read pulses is unchanged.
+~~~text
+PaddingDelay = TotalDelay - 2*Delaytime - 2*Rt_s - Dwell
+~~~
 
-Insufficient total time is rejected before measurement. Zero padding is omitted; nonzero padding must meet the default 10 V range segment duration limit of 20 ns–1 s. Hardware timing is limited by its 10 ns resolution. Parameter sheets and the batch summary save `TotalDelay` and `PaddingDelay`. Fixing this interval controls elapsed time since preset, while the time from the end of disturbance to readout still varies with pulse width.
+Both waits and disturb edges count; the wait between half-PUND reads remains unchanged. Reject insufficient time before acquisition. Omit zero padding; nonzero padding must meet the configured segment limits (default 10 V: 20 ns to 1 s, with 10 ns hardware resolution). Save TotalDelay/PaddingDelay in parameters and batch summaries. This fixes time since preset; disturb-to-read time still varies with pulse width.
+
+MeasureSquare=False disables acquisition of the square segment, not the applied pulse.
+
+See the [manual reference](../../../reference/manuals/PARAMETER_LIMITS.md) for mode and timing limits.
 
 ## 中文
 
-### FORC 与 NLS 扫描
+这些入口自己定义波形与扫描计划，共用 PMU 执行/分析。
 
-| 文件 | 用途 |
+| 入口 | 计划 |
 |---|---|
-| [FORC.py](FORC.py) | 每个反转电压单独执行一条一阶反转曲线 |
-| [FORC_1excute.py](FORC_1excute.py) | 将多条反转曲线合并为一次 SARB 执行，再分离分析 |
-| [NLS_1C_switch.py](NLS_1C_switch.py) | 提供可配置的单次 NLS 写入/读回及预览 |
-| [NLS_1C_switch_list.py](NLS_1C_switch_list.py) | 调用前者扫描 Dwell_list × Vsquare_list |
+| [FORC.py](FORC.py) | 每个反转电压单独执行 |
+| [FORC_1excute.py](FORC_1excute.py) | 多条反转曲线合并一次 SARB，分析时拆分 |
+| [NLS_1C_switch.py](NLS_1C_switch.py) | 单次 NLS 写读及预览 |
+| [NLS_1C_switch_list.py](NLS_1C_switch_list.py) | 调用单次入口扫描 Dwell_list × Vsquare_list |
 
-FORC 的 Vmax 是相对 offset 的幅值；反转电压满足 -Vmax ≤ Vr < Vmax 是算法约束。full_sweep_time 按电压跨度换算分支时间，所以靠近 +Vmax 的曲线可能出现很短的实际段。合并版本还须符合单次段数与采样点预算。
+FORC 的 Vmax 相对 offset，反转电压要求 -Vmax <= Vr < Vmax。full_sweep_time 随跨度换算，因此接近 +Vmax 的反转点可能产生很短的段。合并曲线还需满足段数/采样预算。
 
-NLS 的 Dwell 是方形写入平台时间，Vsquare 为写入电平；MeasureSquare 控制这部分是否采集，关闭采集仍输出脉冲。
+运行前修改顶部设置并确认各入口预览行为。NLS 的 Dwell 是平台时间，Vsquare 是写入电平。
 
-参数依据：[手册限制与模式速查](../../../reference/manuals/PARAMETER_LIMITS.md)。
+### NLS 时间定义
 
-### NLS 固定读出间隔
+TotalDelay 从 preset/prepost 下降沿结束计时，到第一个 half-PUND 读取上升沿开始。Dwell 为扰动平台时间，额外加入不采集的基线保持：
 
-`TotalDelay`（秒，默认 0.11）从 preset/prepost 下降沿结束计时，到 half-PUND 第一个读取上升沿开始。方波平台为 `Dwell`；在方波后增加不采集的基线等待段：`PaddingDelay = TotalDelay - 2*Delaytime - 2*Rt_s - Dwell`。基线为 `offset`，当前为 0 V；原有两段等待和扰动边沿均计入总间隔，half-PUND 两次读取之间的 `Delaytime` 不变。
+~~~text
+PaddingDelay = TotalDelay - 2*Delaytime - 2*Rt_s - Dwell
+~~~
 
-总间隔不足会在测试前报错；补偿为零时省略新增段，非零补偿须满足默认 10 V 档 20 ns–1 s 段长限制。实际仪器时间精度受 10 ns 分辨率限制。参数表保存 `TotalDelay` 和 `PaddingDelay`；批量扫描汇总表也保存这两项。固定此间隔可控制 preset 后的总等待时间，但不同脉宽仍会对应不同的扰动结束后等待时间。
+两段等待及扰动边沿均计入，half-PUND 两次读取间等待不变。总时间不足会在采集前拒绝；补齐为零时省略，非零时需符合所用段长限制（默认 10 V 档为 20 ns 到 1 s，硬件分辨率 10 ns）。参数和批量汇总保存 TotalDelay/PaddingDelay。固定的是 preset 后经过时间，扰动结束至读取的时间仍随脉宽变化。
+
+MeasureSquare=False 只关闭方形段采集，不取消实际脉冲。
+
+模式和时间限制见[手册速查](../../../reference/manuals/PARAMETER_LIMITS.md)。

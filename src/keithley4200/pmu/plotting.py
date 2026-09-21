@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 # PMU plotting helpers.
 """
 Plot management and visualization helpers for Keithley 4200A data.
@@ -300,3 +301,85 @@ def plot_resistances(df, width_us=None, amp_v=None, res_min=1.0,
     """Legacy time-series entry; res_min is unused, filter resistance before plotting."""
     return plot_time_series(df, channels=(1, 2), width_us=width_us, amp_v=amp_v, 
                            resistance_scale=resistance_scale, show=show, return_fig=return_fig)
+
+
+def save_ids_dual_axis_plot(
+    configs,
+    ids,
+    output_path,
+    *,
+    read_gate_voltage,
+    read_drain_voltage,
+    read_delay,
+    compress_above=0.1,
+    compressed_width=2e-4,
+    dpi=180,
+):
+    """Save Gate/Drain voltage and measured CH2 Ids on a dual-y plot."""
+    from .preview import sequence_configs_to_dataframe, _measurement_times
+    import matplotlib.pyplot as plt
+    import pandas as pd
+
+    waveform = sequence_configs_to_dataframe(
+        configs,
+        channel_labels=("CH1", "CH2"),
+        compress_constant_segments_above=compress_above,
+        compressed_segment_width=compressed_width,
+    )
+    display_times, actual_times = _measurement_times(
+        configs[1], compress_above, compressed_width
+    )
+    ids = pd.to_numeric(pd.Series(ids), errors="coerce").reset_index(drop=True)
+    if len(ids) != len(display_times):
+        raise ValueError(
+            f"Ids plot expected {len(display_times)} CH2 read points, received {len(ids)}."
+        )
+
+    fig, voltage_axis = plt.subplots(figsize=(12, 6))
+    voltage_axis.plot(waveform["T_CH1"], waveform["V_CH1"], label="Gate pulse (CH1)")
+    voltage_axis.plot(waveform["T_CH2"], waveform["V_CH2"], label="Drain pulse (CH2)")
+    voltage_axis.set_xlabel("Displayed time (long delays compressed)")
+    voltage_axis.set_ylabel("Programmed voltage (V)")
+    voltage_axis.grid(alpha=0.3)
+
+    current_axis = voltage_axis.twinx()
+    current_axis.plot(
+        display_times,
+        ids,
+        color="black",
+        marker="o",
+        linewidth=1.2,
+        markersize=4,
+        label="Ids (PMU CH2)",
+    )
+    current_axis.set_ylabel("Ids (A)")
+    voltage_axis.set_title("FeFET program/read waveform and CH2 Ids")
+    voltage_axis.text(
+        0.01,
+        0.02,
+        f"Ids source: PMU CH2 Current\nVg_read = {read_gate_voltage:g} V\n"
+        f"Vd_read = {read_drain_voltage:g} V\nRead delay = {read_delay:g} s",
+        transform=voltage_axis.transAxes,
+        va="bottom",
+        bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.8},
+    )
+    handles1, labels1 = voltage_axis.get_legend_handles_labels()
+    handles2, labels2 = current_axis.get_legend_handles_labels()
+    voltage_axis.legend(handles1 + handles2, labels1 + labels2, loc="upper right")
+    fig.tight_layout()
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=dpi)
+    plt.close(fig)
+    print(f"Saved Ids dual-axis plot to {output_path}")
+    return pd.DataFrame(
+        {
+            "DisplayTime_s": display_times,
+            "ActualProgramTime_s": actual_times,
+            "Ids_CH2_A": ids,
+            "Vg_read_V": read_gate_voltage,
+            "Vd_read_V": read_drain_voltage,
+        }
+    )
+
+

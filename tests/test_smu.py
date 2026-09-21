@@ -1,5 +1,8 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 from pathlib import Path
 import sys
+import importlib
+from contextlib import contextmanager
 import tempfile
 import unittest
 from unittest import mock
@@ -26,7 +29,6 @@ from keithley4200.smu.system_mode import (
     estimate_smu_timeout_s,
     execute_and_wait,
     linear_sweep_point_count,
-    run_linear_voltage_sweep,
     resolve_smu_timeout_s,
     validate_linear_sweep,
 )
@@ -62,10 +64,36 @@ class SmuSystemModeTests(unittest.TestCase):
         4: "direct",
     }
 
+    def _exercise_linear_entry(self, fake, *, sweep_channel, bias_channel,
+                               available_channels=(1, 2, 3, 4), smu_connections=None,
+                               **parameters):
+        """Inject fake I/O into the real experiment; do not reproduce its sequence."""
+        module = importlib.import_module("measurements.smu.2terminal.linear_voltage_sweep")
+        settings = dict(module.PARAMS, **parameters)
+        count = linear_sweep_point_count(settings["start"], settings["stop"], settings["step"])
+        fake.buffers = {name: ",".join(["N0"] * count) for name in ("I1", "V1", "I2", "V2")}
+
+        @contextmanager
+        def session(*args):
+            yield type("Session", (), {"query": staticmethod(fake)})()
+
+        with tempfile.TemporaryDirectory() as directory, \
+             mock.patch.object(module, "SMUSession", side_effect=session), \
+             mock.patch.object(module, "PARAMS", settings), \
+             mock.patch.object(module, "SWEEP_CHANNEL", sweep_channel), \
+             mock.patch.object(module, "BIAS_CHANNEL", bias_channel), \
+             mock.patch.object(module, "AVAILABLE_CHANNELS", available_channels), \
+             mock.patch.object(module, "SMU_CONNECTIONS", smu_connections), \
+             mock.patch.object(module, "SAVE_DIR", Path(directory)), \
+             mock.patch.object(module, "save_workbook"), \
+             mock.patch.object(module, "save_current_density_plots", return_value=(Path(directory)/"j.png", Path(directory)/"log.png")):
+            module.main()
+        return [command.split("'")[1] for command in fake.commands if command.startswith("DO '")]
+
     def test_linear_sweep_disables_every_available_channel_before_defining_use(self):
         fake = FakeKxci()
 
-        variables = run_linear_voltage_sweep(
+        variables = self._exercise_linear_entry(
             fake,
             sweep_channel=2,
             bias_channel=1,
@@ -88,12 +116,12 @@ class SmuSystemModeTests(unittest.TestCase):
         self.assertIn(":ERROR:LAST:CLEAR", fake.commands)
         self.assertIn(":ERROR:LAST:GET", fake.commands)
         self.assertIn("ME1", fake.commands)
-        self.assertEqual(variables, ["ISWEEP", "VSWEEP", "IBIAS", "VBIAS"])
+        self.assertEqual(variables, ["I2", "V2", "I1", "V1"])
 
     def test_rpm_channels_switch_after_reset_and_restore_after_measurement(self):
         fake = FakeKxci()
 
-        run_linear_voltage_sweep(
+        self._exercise_linear_entry(
             fake,
             sweep_channel=2,
             bias_channel=1,
@@ -121,7 +149,7 @@ class SmuSystemModeTests(unittest.TestCase):
     def test_direct_channels_do_not_send_rpm_commands(self):
         fake = FakeKxci()
 
-        run_linear_voltage_sweep(
+        self._exercise_linear_entry(
             fake,
             sweep_channel=4,
             bias_channel=3,
@@ -138,7 +166,7 @@ class SmuSystemModeTests(unittest.TestCase):
     def test_mixed_direct_and_rpm_run_switches_only_the_rpm_channel(self):
         fake = FakeKxci()
 
-        run_linear_voltage_sweep(
+        self._exercise_linear_entry(
             fake,
             sweep_channel=3,
             bias_channel=1,
@@ -184,7 +212,7 @@ class SmuSystemModeTests(unittest.TestCase):
         fake = FakeKxci(error="KXCI command error. (-992)")
 
         with self.assertRaisesRegex(RuntimeError, "-992"):
-            run_linear_voltage_sweep(
+            self._exercise_linear_entry(
                 fake,
                 sweep_channel=2,
                 bias_channel=1,
@@ -240,7 +268,7 @@ class SmuSystemModeTests(unittest.TestCase):
             side_effect=(0.0, 1.0),
         ):
             with self.assertRaises(TimeoutError):
-                run_linear_voltage_sweep(
+                self._exercise_linear_entry(
                     fake,
                     sweep_channel=2,
                     bias_channel=1,

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Safe connection lifecycle for repository 4200A-SCS SMU scripts."""
 
 from __future__ import annotations

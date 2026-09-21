@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """Regression tests for isolated run parameters and saved configuration."""
 from contextlib import ExitStack, redirect_stdout
 from copy import deepcopy

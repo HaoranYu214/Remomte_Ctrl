@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：FeFET 延迟扫描；在本文件改 DELAY_TIMES 和 SWEEP_NAME。
-# 写脉冲、读偏置、仪器及保存根目录继承 bipolar_program_read.py；本文件每点只覆盖 read_delay。
-# 流程：main → 每个延迟独立写读 → 读取各工作簿 → 保存汇总及延迟曲线。
-# 这是实测扫描入口；启动前要求 bipolar_program_read.PREVIEW_ONLY=False。
+# Entry: FeFET delay sweep; edit DELAY_TIMES and SWEEP_NAME here.
+# Write pulses, read biases, instrument, and output root come from bipolar_program_read.py; override only read_delay per point.
+# Flow: main -> independent program/read at each delay -> read workbooks -> save summary and delay plots.
+# This entry acquires real data; bipolar_program_read.PREVIEW_ONLY must be False.
 
 """Run independent dual-polarity FeFET tests over a retention-delay sweep.
 
@@ -38,7 +39,7 @@ DELAY_TIMES = (1e-5, 1e-3, 1e-2, 1e-1, 1.0, 10.0, 50.0)
 SWEEP_NAME = "dual_delay_sweep"
 
 
-# 检查延迟列表非空且每项大于零；不连接仪器。
+# Validate a nonempty list of positive delays without connecting.
 def validate_delay_times():
     if not DELAY_TIMES:
         raise ValueError("DELAY_TIMES must contain at least one delay.")
@@ -46,7 +47,7 @@ def validate_delay_times():
         raise ValueError("Every retention delay must be greater than zero.")
 
 
-# 保存延迟扫描汇总工作簿和电流随延迟变化图，返回两个文件路径。
+# Save the delay summary workbook and current-versus-delay plot; return both paths.
 def save_summary(summary, output_dir):
     summary_stem, run_time = reserve_summary_stem(output_dir, "delay_summary")
     summary = summary.assign(time=run_time)
@@ -81,8 +82,8 @@ def save_summary(summary, output_dir):
     return workbook_path, plot_path
 
 
-# 遍历 DELAY_TIMES，每个延迟独立调用双极性写读并保存，最后返回汇总表和图片路径。
-# 仅覆盖读前延迟；写脉冲、仪器和其他设置继承 bipolar_program_read.py。
+# Run and save bipolar program/read for each DELAY_TIMES value, then return summary and plot paths.
+# Override only the delay before reading; inherit pulses, instrument, and other settings from bipolar_program_read.py.
 def main():
     validate_delay_times()
     if dual.PREVIEW_ONLY:

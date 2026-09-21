@@ -25,7 +25,7 @@ passes through the RPM attached to that PMU channel. The current instrument
 uses RPM paths for SMU1/SMU2 (`PMU1-1`/`PMU1-2`) and direct paths for
 SMU3/SMU4.
 
-Saved workbooks use three worksheets in a stable order:
+The two-terminal sweep workbooks use three worksheets in a stable order:
 
 1. `Raw`: commanded values, every measured buffer, and the original KXCI
    status columns.
@@ -35,7 +35,7 @@ Saved workbooks use three worksheets in a stable order:
    scripted extraction.
 3. `Parameters`: the complete experiment configuration.
 
-Every IV entry exposes `DEVICE_AREA_CM2`. Raw current remains in amperes; the
+The two-terminal sweep entries expose `DEVICE_AREA_CM2`. FET entries instead save Id/Ig in amperes; see their own guide for workbook sheets. Raw current remains in amperes; the
 processed current density is `J = I / DEVICE_AREA_CM2` in A/cm². Default PNGs
 plot J-V and log(abs(J))-V. Major log tick labels display physical values such
 as `1e-2` and `1e-1` A/cm² rather than their numerical log10 exponents.
@@ -64,13 +64,13 @@ System Mode 的 AVAILABLE_CHANNELS 必须列出 KCon 中全部已安装和映射
 
 SMU_CONNECTIONS 描述实际接线：direct 为直接连接探针；rpm:PMUN-C 为经过指定 PMU 通道的 RPM。当前系统 SMU1/2 经 PMU1-1/2，SMU3/4 直连。
 
-工作簿固定包含：
+上述两端扫描的工作簿包含（FET 的工作表见 3terminal 指南）：
 
 1. Raw：设定电压、全部测量缓冲及原始 KXCI 状态。
 2. PlotData：CommandedVoltage，然后 V1、I1、J1_A_per_cm2、AbsI1、AbsJ1_A_per_cm2，随后为通道 2 对应列；不含状态，供绘图/提取。
 3. Parameters：完整实验配置。
 
-DEVICE_AREA_CM2 为器件面积。原始电流单位 A，电流密度 J=I/DEVICE_AREA_CM2，单位 A/cm²。默认 PNG 绘制 J-V 和 log(abs(J))-V；对数刻度显示实际 1e-2、1e-1 A/cm² 等值，不是 log10 指数。
+两端扫描的 DEVICE_AREA_CM2 为器件面积；FET 入口直接保存 Id/Ig，不做面积归一化。原始电流单位 A，电流密度 J=I/DEVICE_AREA_CM2，单位 A/cm²。默认 PNG 绘制 J-V 和 log(abs(J))-V；对数刻度显示实际 1e-2、1e-1 A/cm² 等值，不是 log10 指数。
 
 ## Memristor 分段扫描
 [segmented_voltage_sweep_Memristor.py](segmented_voltage_sweep_Memristor.py) 逐次改变正峰值，配合固定负峰值。POSITIVE_PEAK_STEP 决定峰值之间的变化，SEGMENT_STEP 决定每段内的采样步长。最终展开列表每次最多 4096 点。

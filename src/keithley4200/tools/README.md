@@ -1,39 +1,35 @@
-# Offline tools
+# Offline development tools
 
 [English](#english) | [中文](#中文)
 
 ## English
 
-- [waveform_preview.py](waveform_preview.py): converts actual seq_configs to preview plots/numeric tables and provides program/read current overlays. It does not connect to the instrument.
-- [dry_run.py](dry_run.py): intercepts communication commands and generates synthetic data from configured waveforms to check software flow.
+[dry_run.py](dry_run.py) intercepts PMU communication and generates synthetic responses from pulse/Segment Arb commands. Run it in a separate process:
 
-Run from the repository root:
-
-```powershell
+~~~powershell
 python src/keithley4200/tools/dry_run.py --no-save measurements/pmu/fe_cap/PV2.py
-```
+~~~
 
-After an editable installation, python -m keithley4200.tools.dry_run is also available. --no-save disables the Excel/CSV/figure saves covered by the hooks; explicit mkdir calls in an entry can still create directories.
+After installation, python -m keithley4200.tools.dry_run is equivalent. Explicit relative script paths use the working directory; the default RV2 target needs the source checkout.
 
-Synthetic data does not represent device response or instrument sampling accuracy. SARB waveform segments use 32 samples and spot segments use one. Averaged modes and acquisitions exceeding the synthetic-point budget raise explicit errors. Communication/save/sleep replacements affect the whole process, so run dry-run in a separate process.
+SARB waveform segments produce 32 points, spot segments one, and unmeasured segments retain elapsed time. Averaged modes and acquisitions exceeding 65,536 synthetic points raise errors. Data exercises the normal parser, not device physics or real sample rates.
 
-Parameter source: [manual limits and mode reference (Chinese)](../../../reference/manuals/PARAMETER_LIMITS.md).
+Communication, sleep and optional saving hooks affect the whole process. --no-save suppresses covered workbook/CSV/figure saves; explicit directory creation may still occur. Dry runs do not persist synthetic current ranges into real defaults.
+
+Preview helpers belong in [pmu/preview.py](../pmu/preview.py) and [smu/preview.py](../smu/preview.py); measured plots belong in each hardware package's plotting.py.
 
 ## 中文
 
-### 离线工具
+[dry_run.py](dry_run.py) 拦截 PMU 通信，根据脉冲/Segment Arb 命令产生模拟响应。请在独立进程执行：
 
-- [waveform_preview.py](waveform_preview.py)：将实际 seq_configs 转成预览图/数值表，也提供写读电流叠图。它不连接仪器。
-- [dry_run.py](dry_run.py)：拦截通信命令，根据已配置的波形产生模拟数据，供检查软件流程。
-
-在仓库根目录运行：
-
-```powershell
+~~~powershell
 python src/keithley4200/tools/dry_run.py --no-save measurements/pmu/fe_cap/PV2.py
-```
+~~~
 
-可编辑安装后也可使用 python -m keithley4200.tools.dry_run。--no-save 关闭工具覆盖的 Excel/CSV/图形保存；入口自身显式 mkdir 仍可能创建目录。
+安装后也可使用 python -m keithley4200.tools.dry_run。显式相对脚本路径以当前目录为准；默认 RV2 目标需要源码仓库。
 
-模拟数据不代表器件响应或仪器采样精度。SARB 波形段使用 32 点，定点测量使用 1 点；平均模式及超出模拟点预算会明确报错。通信/保存/sleep 替换是进程级的，使用独立进程运行 dry-run。
+SARB 波形段生成 32 点，定点段生成一点，不采集段仍累计时间。平均模式或超过 65,536 模拟点会报错。模拟数据经过正常解析器，但不代表器件物理或真实采样率。
 
-参数依据：[手册限制与模式速查](../../../reference/manuals/PARAMETER_LIMITS.md)。
+通信、sleep 和可选保存钩子影响整个进程。--no-save 禁止钩子覆盖的表格、CSV 和图片保存；实验显式创建的目录仍可能出现。模拟量程不会写入真实默认设置。
+
+预览分别在 [pmu/preview.py](../pmu/preview.py) 和 [smu/preview.py](../smu/preview.py)；实测图在各硬件包的 plotting.py。

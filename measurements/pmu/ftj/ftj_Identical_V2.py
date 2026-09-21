@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：ftj_Identical_V2；先改本文件的 INST、CH1/CH2、params、CURRENT_RANGES 和 SAVE_DIR。
-# 流程：run_test 合并本次参数 → build_waveform 构造波形 → PMU 执行/读回 → 整理并保存结果。
-# PREVIEW_ONLY=True 时只预览；run_test 的显式参数优先于文件默认值。
-# 查看波形定义从 build_waveform 开始；一般改实验条件不需要修改下方辅助函数。
+# Start here: ftj_Identical_V2; edit INST, CH1/CH2, params, CURRENT_RANGES and SAVE_DIR.
+# Flow: run_test merges parameters -> build_waveform -> PMU execution/readout -> process and save results.
+# PREVIEW_ONLY=True previews only; explicit run_test arguments override file defaults.
+# Read build_waveform for waveform definitions; routine parameter changes do not require editing helpers below.
 
 """FTJ Identical V2: separate executions with real Python inter-pulse waits."""
 
@@ -33,12 +34,12 @@ from keithley4200.pmu.session import PMUSession
 # These KXCI error commands apply to all cards, including PMU (manual 4-2/4-3).
 from keithley4200.smu.common import clear_kxci_error, raise_for_kxci_error
 from keithley4200.measurement_parameters import merge_parameters, remap_channel_options
-from keithley4200.tools.waveform_preview import preview_sequence_configs
+from keithley4200.pmu.preview import preview_sequence_configs
 
 
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 CH1, CH2 = 1, 2
-SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L30_2\FTJ\Identical_V2")
+SAVE_DIR = Path("data/pmu/ftj/ftj_Identical_V2")
 FILE_STEM = "Identical2"
 
 CURRENT_RANGES = {CH1: 1e-5, CH2: 1e-5}
@@ -78,8 +79,8 @@ READ_SEQ_ID = 2
 WRITE_NEGATIVE_SEQ_ID = 3
 
 
-# 根据 parameters 和 channels 生成本次波形配置、执行顺序及关联信息。
-# 返回供测量和预览共用的字典；只计算波形，不连接仪器。
+# Build this run's waveform configurations, execution order and metadata from parameters and channels.
+# Return a dictionary shared by acquisition and preview; waveform construction does not connect to hardware.
 def build_waveform(*, parameters=None, channels=None):
     """Build pulse arrays and execution metadata from this run's parameters."""
     parameters = params if parameters is None else parameters
@@ -173,7 +174,7 @@ def build_waveform(*, parameters=None, channels=None):
     }
 
 
-# 返回两个通道的单脉冲配置：第一通道施加脉冲，第二通道保持零电压。
+# Return one pulse configuration per channel: the first applies the pulse, the second remains at zero volts.
 def _pulse_config(seq_id, voltage, time_values, meas_types, meas_start, meas_stop, *, base_v):
     ch1_start = [base_v, voltage, voltage, base_v]
     ch1_stop = [voltage, voltage, base_v, base_v]
@@ -189,7 +190,7 @@ def _pulse_config(seq_id, voltage, time_values, meas_types, meas_start, meas_sto
     return ch1_config, ch2_config
 
 
-# 离线预览正写入、读回、负写入三个基本脉冲；此图不展开完整循环和主机等待。
+# Preview positive program, read and negative program pulses; this does not expand all loops or host waits.
 def preview_waveform(
     output_path=None,
     *,
@@ -212,8 +213,8 @@ def preview_waveform(
     )
 
 
-# 通过已有 query 连接执行一个写入或读回步骤，返回双通道数据。
-# 检查仪器错误，并在结束或异常时关闭输出。
+# Execute one program or read step through the existing query connection; return both channels.
+# Check instrument errors and disable outputs on completion or failure.
 def run_single_test(query, test, *, channels=None, current_ranges=None, segarb_options=None):
     channels = tuple(channels) if channels is not None else (CH1, CH2)
     ch1, ch2 = channels
@@ -222,7 +223,7 @@ def run_single_test(query, test, *, channels=None, current_ranges=None, segarb_o
 
     clear_kxci_error(query)
 
-    # 发送命令并返回响应；在 EXECUTE 前后检查 KXCI 错误，避免把未启动误判为完成。
+    # Send a command and return its response; check KXCI errors around EXECUTE to detect failed starts.
     def checked_query(command):
         # Idle status is also returned when EXECUTE never started (7-32).
         # Check configuration before starting, then catch final verification errors.
@@ -252,7 +253,7 @@ def run_single_test(query, test, *, channels=None, current_ranges=None, segarb_o
 
 
 
-# 将当前进度写入临时工作簿，写完后替换目标文件，保留已完成步骤的数据。
+# Write progress to a temporary workbook, then replace the target, retaining completed steps.
 def save_checkpoint(path, rows, frames, params_df):
     """Replace one workbook only after its updated checkpoint is fully written."""
     import os
@@ -272,9 +273,9 @@ def save_checkpoint(path, rows, frames, params_df):
             os.unlink(temporary)
 
 
-# 合并 params_override 后逐次执行写入/读回，并在步骤之间使用 Python 等待。
-# preview_only=True 时只预览；save_results=True 时逐步更新工作簿，中断也保存当前进度。
-# 返回汇总表、拼接数据、输出路径和本次参数。
+# Merge params_override, execute program/read steps individually and use Python waits between steps.
+# preview_only=True previews only; save_results=True checkpoints each step, including progress on interruption.
+# Return the summary, concatenated data, output path and run parameters.
 def run_test(
     params_override=None,
     *,

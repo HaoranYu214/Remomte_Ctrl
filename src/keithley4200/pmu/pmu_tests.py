@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 # 4225-PMU command and test helpers.
 """
 PMU Segment Arb configuration, execution, and output control.

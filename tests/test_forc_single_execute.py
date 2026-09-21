@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 from pathlib import Path
 import sys
 import tempfile

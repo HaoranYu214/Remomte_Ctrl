@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 ssme / Haoran Yu.
 
-# 阅读入口：retentionPV；先改 INST、CH1/CH2、params、SEGARB_OPTIONS 和 SAVE_DIR。
-# 流程：run_test → make_retention_plan → 分阶段施加波形/关闭输出等待 → 保存原始数据和计时 → 分析。
-# PREVIEW_ONLY=True 时只预览；本测试使用固定量程，不自动换档重测。
-# params_override 覆盖同名默认参数；阶段等待由 _retention.py 执行，波形仍在本文件定义。
+# Start here: retentionPV; edit INST, CH1/CH2, params, SEGARB_OPTIONS and SAVE_DIR.
+# Flow: run_test -> make_retention_plan -> execute stages/wait with outputs off -> save raw data/timing -> analyze.
+# PREVIEW_ONLY=True previews only; this test uses fixed ranges without automatic range retries.
+# params_override replaces matching defaults; _retention.py executes waits while this file defines waveforms.
 
 """Output-off retention PV with explicit split executions and host timing."""
 
@@ -28,7 +29,7 @@ from keithley4200.pmu.session import PMUSession
 from keithley4200.measurement_parameters import merge_parameters, remap_channel_options
 from measurements.pmu.fe_cap._retention import execute_plan, validate_plan, save_raw, preview_plan
 
-INST = "TCPIP0::129.125.87.80::1225::SOCKET"
+INST = "TCPIP0::192.0.2.1::1225::SOCKET"
 CH1, CH2 = 1, 2
 params = dict(
     rise_time=2.5e-5,
@@ -48,10 +49,10 @@ SEGARB_OPTIONS = {
     "ENABLE_LLEC": False,
 }
 PREVIEW_ONLY = True
-SAVE_DIR = Path.home() / "Documents" / "data" / "retentionPV"
+SAVE_DIR = Path("data/pmu/fe_cap/retentionPV")
 
 
-# 把返回的采样点均分为带等待和不带等待的两条 PV 回线。
+# Split returned samples equally into two PV loops, with and without a wait.
 def _split_complete_loops(time, voltage, current):
     """Split measured points equally into delayed and non-delayed loops."""
     point_count = len(voltage)
@@ -64,7 +65,7 @@ def _split_complete_loops(time, voltage, current):
         (time[split_index:], voltage[split_index:], current[split_index:]),
     )
 
-# 把两条回线整理为并排四列表格；点数不等时以 NaN 补齐。
+# Arrange two loops side by side in four columns, padding unequal lengths with NaN.
 def _build_loop_sheet(delay_loop, no_delay_loop):
     """Build one four-column loop table, padding unequal point counts with NaN."""
     return pd.DataFrame(
@@ -77,7 +78,7 @@ def _build_loop_sheet(delay_loop, no_delay_loop):
     )
 
 
-# 为本次数据和图片预留同一个文件主名；会在输出目录登记编号，避免覆盖。
+# Reserve one shared file stem for data and plots, registering a run number to avoid overwrites.
 def build_fname_base(*, parameters=None, save_dir=None):
     """Reserve one short output stem shared by the workbook and its plots."""
     parameters = params if parameters is None else parameters
@@ -90,7 +91,7 @@ def build_fname_base(*, parameters=None, save_dir=None):
     return reserve_output_stem(save_dir, name)
 
 
-# 生成双通道 PV2 段波形及采集窗口，供预览或下发仪器；本函数不发送命令。
+# Build both PV2 channel segment waveforms and acquisition windows; no commands are sent.
 def make_pv2_seq_configs(*, channels=None, parameters=None):
     """Build PV2 seq_configs directly in this script."""
     parameters = params if parameters is None else parameters
@@ -147,7 +148,7 @@ def make_pv2_seq_configs(*, channels=None, parameters=None):
     return {ch1: [ch1_config], ch2: [ch2_config]}
 
 
-# 生成预置—关闭输出等待—连续采集两条 PV 回线的分阶段执行计划。
+# Build staged preset -> output-off wait -> continuous acquisition of two PV loops.
 def make_retention_plan(*, channels=None, parameters=None):
     """Preset, output-off wait, then both PV loops in one execution."""
     parameters = params if parameters is None else parameters
@@ -163,7 +164,7 @@ def make_retention_plan(*, channels=None, parameters=None):
     return stages
 
 
-# 离线显示执行边界、采集窗口和输出关闭的等待段；可压缩长等待以便阅读。
+# Preview execution boundaries, acquisition windows and output-off waits; optionally compress long waits.
 def preview_waveform(
     output_path=None,
     *,
@@ -193,7 +194,7 @@ def preview_waveform(
     return fig
 
 
-# 把本次实验参数和仪器选项整理为参数表，供结果文件记录；不执行测量。
+# Build a parameter table from this run's settings and instrument options without acquiring data.
 def build_params_table(*, channels=None, inst=None, parameters=None, segarb_options=None):
     """Return the PV2 run parameters as a two-column table."""
     parameters = params if parameters is None else parameters
@@ -219,7 +220,7 @@ def build_params_table(*, channels=None, inst=None, parameters=None, segarb_opti
     return pd.DataFrame(rows)
 
 
-# 从零电荷开始积分电流，再平移极化，使正负剩余极化值对称。
+# Integrate current from zero charge, then shift polarization to make positive/negative remanence symmetric.
 def _integrate_loop_from_zero(time, voltage, current, area_cm2, *, parameters=None):
     """Integrate from Q=0, then shift polarization so the two Pr values are symmetric."""
     parameters = params if parameters is None else parameters
@@ -269,7 +270,7 @@ def _integrate_loop_from_zero(time, voltage, current, area_cm2, *, parameters=No
     )
 
 
-# 拆分并独立积分两条 PV 回线，返回各通道的分析表；不连接仪器。
+# Split and independently integrate both PV loops; return per-channel analysis tables without hardware access.
 def analyze_pv2(df_ch1, df_ch2, *, channels=None, parameters=None):
     """Split points in half and integrate each PV2 loop independently from zero."""
     parameters = params if parameters is None else parameters
@@ -316,9 +317,9 @@ def analyze_pv2(df_ch1, df_ch2, *, channels=None, parameters=None):
     }
 
 
-# 合并 params_override 后以固定量程执行保持测试，在阶段间关闭输出并等待。
-# preview_only=True 时只预览；实测先保存原始数据/计时，再分析，返回结果字典。
-# 不自动换档重测，以免额外脉冲改变保持历史。
+# Merge params_override and run the retention test at fixed ranges, disabling outputs between stages.
+# preview_only=True previews only; acquisition saves raw data/timing before analysis and returns a result dictionary.
+# Do not retry at another range: extra pulses would alter retention history.
 def run_test(
     params_override=None,
     *,

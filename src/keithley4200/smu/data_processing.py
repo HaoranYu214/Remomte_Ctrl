@@ -1,3 +1,4 @@
+# Copyright (c) 2026 ssme / Haoran Yu.
 """SMU buffer retrieval and tabular data helpers."""
 
 # Kept independent from the PMU data-buffer format.

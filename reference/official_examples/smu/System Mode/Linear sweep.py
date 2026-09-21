@@ -13,7 +13,7 @@ import time
 # Extra commands for plotting
 import plotly.express as px
 
-INST_RESOURCE_STR = "TCPIP0::129.125.87.80::1225::SOCKET" # Documentation-only placeholder; do not put a live address in reference examples
+INST_RESOURCE_STR = "TCPIP0::192.0.2.1::1225::SOCKET" # Documentation-only placeholder; do not put a live address in reference examples
 my4200 = Communications(INST_RESOURCE_STR) # Opens the resource manager in PyVISA with the corresponding instrument resource string
 my4200.connect() # Opens connections to the 4200A-SCS
 my4200._instrument_object.write_termination = "\0" # Set PyVISA write terminator
