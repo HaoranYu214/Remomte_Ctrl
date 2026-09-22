@@ -170,7 +170,6 @@ def save_summary_workbook(rows, path, *, sheet_name="Summary"):
     frame = rows if isinstance(rows, pd.DataFrame) else pd.DataFrame(rows)
     return save_atomic_workbook({sheet_name: frame}, path)
 
-#   +-------------------+
-#   | ssme / haoran yu  |
-#   |      [saved]      |
-#   +-------------------+
+#      /\_/\
+#     ( -.- ) zZ
+#      > ^ <  ssme / haoran yu

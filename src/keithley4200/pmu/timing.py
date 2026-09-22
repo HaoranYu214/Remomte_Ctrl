@@ -35,5 +35,6 @@ def nls_padding_time(params):
         raise ValueError("NLS padding segment must be zero or between 20 ns and 1 s (10 V range).")
     return padding
 
-#   __|--|__|--|__  ssme
-#        t ->       h.y.
+#     /\_/\
+#    ( o.o )   ssme
+#     > ^ <    h.y.
