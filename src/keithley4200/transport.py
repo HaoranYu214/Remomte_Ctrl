@@ -74,6 +74,6 @@ class Communications:
         self._echo(command)
         return self._instrument_object.query(command).rstrip()
 
-#   .-- ssme --.
-#   | tx -> rx |
-#   '-- h.y. --'
+#     /\_/\
+#    ( o.o )  < meow?
+#     > ^ <   ssme / h.y.

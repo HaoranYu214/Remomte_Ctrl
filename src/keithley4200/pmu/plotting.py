@@ -382,7 +382,6 @@ def save_ids_dual_axis_plot(
         }
     )
 
-#   I |    .  *  .
-#     | .           .   ssme
-#     +-------------- V
-#          h.y.
+#     /\_/\
+#    ( o.o ) /
+#     > ^ < /  ssme / h.y.
