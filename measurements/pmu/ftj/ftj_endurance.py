@@ -62,7 +62,7 @@ TARGET_CURRENT_RANGES = None
 TARGET_SEGARB_OPTIONS = None
 
 SAVE_DIR = Path(
-    "data/pmu/ftj/ftj_endurance"
+    r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L30_2\FTJ\endurance6V"
 )
 # Number of complete target runs, not individual write-pulse pairs.
 LOOP_COUNT = 1000

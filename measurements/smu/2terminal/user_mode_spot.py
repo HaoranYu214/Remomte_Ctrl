@@ -30,7 +30,7 @@ from keithley4200.smu.user_mode import (
 )
 
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 DEVICE_AREA_CM2 = (20e-4) ** 2
 CHANNEL = 1
 SOURCE_VOLTAGE = 0.1

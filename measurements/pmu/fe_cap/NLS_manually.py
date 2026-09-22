@@ -25,12 +25,13 @@ for path in (SRC_ROOT, REPO_ROOT):
 
 from keithley4200.pmu.preview import preview_sequence_configs
 from keithley4200.output import measurement_name, reserve_output_stem, voltage_tag, time_tag, saved_at
+from keithley4200.output import set_workbook_author
 from keithley4200.pmu.data_processing import calculate_polarization, read_both_channels
 from keithley4200.pmu.pmu_tests import execute_segARB_test, power_off_outputs
 from keithley4200.pmu.session import PMUSession
 from keithley4200.pmu.timing import nls_padding_time
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
 params = dict(
     offset=0,
@@ -53,7 +54,7 @@ SEGARB_OPTIONS = {
     "ENABLE_LLEC": False,
 }
 
-SAVE_DIR = Path("data/pmu/fe_cap/NLS_manually")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\19-08-2026\Johanna\NLS")
 PREVIEW_ONLY = True
 
 
@@ -192,7 +193,7 @@ def save_nls_results(df_ch1, df_ch2):
 
     if params["MeasureSquare"]:
         with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
-            writer.book.properties.creator = "ssme / Haoran Yu"
+            set_workbook_author(writer.book)
             df_ch1.to_excel(writer, sheet_name="Raw_CH1", index=False)
             df_ch2.to_excel(writer, sheet_name="Raw_CH2", index=False)
             build_params_table().to_excel(writer, sheet_name="Parameters", index=False)
@@ -223,7 +224,7 @@ def save_nls_results(df_ch1, df_ch2):
     df_vp_ch2 = process_nls_channel(df_ch2, CH2)
 
     with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
-        writer.book.properties.creator = "ssme / Haoran Yu"
+        set_workbook_author(writer.book)
         df_ch1.to_excel(writer, sheet_name="Raw_CH1", index=False)
         df_ch2.to_excel(writer, sheet_name="Raw_CH2", index=False)
         df_vp_ch1.to_excel(writer, sheet_name="VP_CH1", index=False)

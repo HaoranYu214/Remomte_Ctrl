@@ -27,6 +27,7 @@ for path in (SRC_ROOT, REPO_ROOT):
 
 from keithley4200.pmu.preview import preview_sequence_configs
 from keithley4200.output import measurement_name, reserve_output_stem, time_tag, saved_at
+from keithley4200.output import set_workbook_author
 from keithley4200.pmu.current_range import acquire_with_auto_current_range
 from keithley4200.pmu.data_processing import read_both_channels
 from keithley4200.pmu.pmu_tests import execute_segARB_test, power_off_outputs
@@ -34,7 +35,7 @@ from keithley4200.pmu.session import PMUSession
 from keithley4200.measurement_parameters import merge_parameters, remap_channel_options
 from keithley4200.parameter_defaults import remember_current_ranges
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
 params = dict(
     rise_time=2.5e-4,
@@ -54,7 +55,7 @@ SEGARB_OPTIONS = {
     "ENABLE_LLEC": False,
 }
 PREVIEW_ONLY = True
-SAVE_DIR = Path("data/pmu/fe_cap/PV2")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L30_3")
 
 
 # Split returned samples equally into two PV loops, with and without a wait.
@@ -353,7 +354,7 @@ def save_pv2_workbook(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
-        writer.book.properties.creator = "ssme / Haoran Yu"
+        set_workbook_author(writer.book)
         df_ch1.to_excel(writer, sheet_name="Channel_1", index=False)
         df_ch2.to_excel(writer, sheet_name="Channel_2", index=False)
         data["df_total"].to_excel(writer, sheet_name="Total", index=False)

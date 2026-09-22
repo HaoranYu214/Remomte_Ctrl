@@ -11,6 +11,7 @@ import locale
 import csv
 
 from keithley4200.output import saved_at
+from keithley4200.output import set_workbook_author
 
 
 def _channel_data_columns(ch, field_count, pulse_iv=None):
@@ -290,7 +291,7 @@ def save_channels_separate_excel(dfs: dict, path, *, parameters=None):
             path = path + ".xlsx"
         
         with pd.ExcelWriter(path, engine='openpyxl') as writer:
-            writer.book.properties.creator = "ssme / Haoran Yu"
+            set_workbook_author(writer.book)
             saved_sheets = 0
             for ch, df in dfs.items():
                 if df is not None and not df.empty:
@@ -358,7 +359,7 @@ def save_excel(df, path):
         if not path.lower().endswith(".xlsx"):
             path = path + ".xlsx"
         with pd.ExcelWriter(path, engine="openpyxl") as writer:
-            writer.book.properties.creator = "ssme / Haoran Yu"
+            set_workbook_author(writer.book)
             df.to_excel(writer, index=False)
         print(f"✅ 已保存 Excel：{path}")
         return True

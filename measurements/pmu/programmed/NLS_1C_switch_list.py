@@ -29,10 +29,11 @@ from measurements.pmu.programmed.NLS_1C_switch import (
     run_nls_switch_test,
 )
 from keithley4200.output import prepare_output_dir, reserve_summary_stem
+from keithley4200.output import set_workbook_author
 from keithley4200.pmu.session import PMUSession
 from keithley4200.pmu.timing import nls_padding_time
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
 SEGARB_OPTIONS = {
     "ENABLE_CONNECTION_COMP": False,
@@ -56,7 +57,7 @@ BASE_PARAMS = dict(
     area_cm2=(20*1e-4)**2*3.14,
 )
 
-SAVE_DIR = Path("data/pmu/programmed/NLS_1C_switch_list")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\19-08-2026\Johanna\NLS_Sweep")
 Dwell_list = np.logspace(-7, -1, 31)
 Vsquare_list = np.arange(0, 2.0, 0.1)
 
@@ -151,7 +152,7 @@ def run_sweep():
     if summary_data:
         df_summary = pd.DataFrame(summary_data).assign(time=run_time)
         with pd.ExcelWriter(f"{summary_stem}.xlsx", engine="openpyxl") as writer:
-            writer.book.properties.creator = "ssme / Haoran Yu"
+            set_workbook_author(writer.book)
             df_summary.to_excel(writer, index=False)
 
     status = "interrupted" if interrupted else "complete"

@@ -38,7 +38,7 @@ from measurements.pmu.fe_cap import PUND_tri, PV2
 # USER CONFIGURATION
 # =============================================================================
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
 
 RUN_PV2 = True
@@ -53,7 +53,7 @@ SEGARB_OPTIONS = {
     "ENABLE_LLEC": False,
 }
 
-SAVE_ROOT = Path("data/workflows/pv2_pund_map")
+SAVE_ROOT = Path(r"C:\Users\P317151\Documents\data\10-09-2026\04A1_2700_1200_300\L20_2\Delay_map")
 SAVE_DIRS = {
     "PV2": SAVE_ROOT / "PV2",
     "PUND_tri": SAVE_ROOT / "PUND_tri",

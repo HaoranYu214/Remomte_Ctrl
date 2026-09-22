@@ -27,6 +27,7 @@ for path in (SRC_ROOT, REPO_ROOT):
 
 from keithley4200.pmu.preview import preview_sequence_configs
 from keithley4200.output import measurement_name, reserve_output_stem, time_tag, saved_at
+from keithley4200.output import set_workbook_author
 from keithley4200.pmu.current_range import acquire_with_auto_current_range
 from keithley4200.pmu.data_processing import calculate_polarization, read_both_channels
 from keithley4200.pmu.pmu_tests import execute_segARB_test, power_off_outputs
@@ -34,7 +35,7 @@ from keithley4200.pmu.session import PMUSession
 from keithley4200.measurement_parameters import merge_parameters, remap_channel_options
 from keithley4200.parameter_defaults import remember_current_ranges
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
 params = dict(
     rise_time=1e-5,
@@ -55,7 +56,7 @@ SEGARB_OPTIONS = {
     "ENABLE_LLEC": False,
 }
 
-SAVE_DIR = Path("data/pmu/fe_cap/PUND_Squr")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\11-06-2026\03D2\L40um1\FE\freqency")
 PREVIEW_ONLY = False
 
 
@@ -220,7 +221,7 @@ def save_pund_workbook(
     segarb_options = remap_channel_options(SEGARB_OPTIONS, (CH1, CH2), channels, segarb_options)
 
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
-        writer.book.properties.creator = "ssme / Haoran Yu"
+        set_workbook_author(writer.book)
         df_ch1.to_excel(writer, sheet_name="Channel_1", index=False)
         df_ch2.to_excel(writer, sheet_name="Channel_2", index=False)
         data["df_total"].to_excel(writer, sheet_name="Total", index=False)

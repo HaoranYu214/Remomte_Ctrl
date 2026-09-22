@@ -38,13 +38,13 @@ STOP_ON_ERROR = True
 SETTLE_TIME_S = 0.5
 
 # Change this one path to relocate all PV2 and PUND outputs.
-BASE_SAVE_DIR = Path("data/workflows/pv_and_pund")
+BASE_SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L20_2\PV4_afterIVendurance")
 SAVE_DIRS = {
     "PV2": BASE_SAVE_DIR,
     "PUND_tri": BASE_SAVE_DIR,
 }
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
 DEVICE_AREA_CM2 = (20e-4) ** 2
 # DEVICE_AREA_CM2 = (10*1e-4)**2*3.14

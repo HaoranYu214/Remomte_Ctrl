@@ -142,7 +142,7 @@ params = dict(
     RES_MAX=1e15,
 )
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
 TEST_MODE = 1
 RESISTANCE_SCALE = "linear"
@@ -182,7 +182,7 @@ def main():
             res_max=params.get("RES_MAX", 1e15),
         )
 
-        save_dir = Path("data/pmu/pulse/pulse_train")
+        save_dir = Path(r"C:\Users\P317151\Documents\data\FTJ\Refined")
         save_dir.mkdir(parents=True, exist_ok=True)
         fname_base = reserve_output_stem(save_dir, measurement_name(
             "PulseTrain", params["CH1_AMPLITUDE"], "tw" + time_tag(params["CH1_WIDTH"]),

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from keithley4200.output import saved_at
+from keithley4200.output import set_workbook_author
 
 from pathlib import Path
 import math
@@ -240,7 +241,7 @@ def save_workbook(path, raw_data, parameters=None, *, plot_data=None):
     path.parent.mkdir(parents=True, exist_ok=True)
     parameters = {**(parameters or {}), "saved_at": saved_at()}
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
-        writer.book.properties.creator = "ssme / Haoran Yu"
+        set_workbook_author(writer.book)
         raw_data.to_excel(writer, sheet_name="Raw", index=False)
         if plot_data is not None:
             plot_data.to_excel(writer, sheet_name="PlotData", index=False)

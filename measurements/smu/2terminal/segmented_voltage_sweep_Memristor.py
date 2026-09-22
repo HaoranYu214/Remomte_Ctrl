@@ -35,7 +35,7 @@ from keithley4200.smu.system_mode import initialize_system_mode, shutdown_system
 
 
 # Instrument and wiring defaults: check when changing hardware or connections.
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 # All installed/mapped channels; direct means a direct connection and rpm means routing through an RPM.
 AVAILABLE_CHANNELS = (1, 2, 3, 4)
 SMU_CONNECTIONS = {
@@ -46,7 +46,7 @@ SMU_CONNECTIONS = {
 }
 
 # Run settings: output directory, active channels, offline preview, and KXCI plots.
-SAVE_DIR = Path("data/smu/2terminal/segmented_voltage_sweep_Memristor")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\10-09-2026\04A1_2700_1200_300\R10_1\IV")
 SWEEP_CHANNEL = 1
 BIAS_CHANNEL = 2
 PREVIEW_ONLY = True  # True previews channel voltages without connecting or saving measurement data.

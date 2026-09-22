@@ -30,12 +30,13 @@ for path in (SRC_ROOT, REPO_ROOT):
         sys.path.insert(0, str(path))
 
 from keithley4200.output import measurement_name, reserve_output_stem, saved_at
+from keithley4200.output import set_workbook_author
 from keithley4200.pmu.data_processing import read_both_channels
 from keithley4200.pmu.pmu_tests import execute_segARB_test, power_off_outputs
 from keithley4200.pmu.session import PMUSession
 
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
 
 PARAMS = dict(
@@ -66,7 +67,7 @@ SEGARB_OPTIONS = dict(
     ENABLE_LLEC=False,
 )
 
-SAVE_DIR = Path("data/pmu/programmed/FORC")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\FORC")
 PREVIEW_ONLY = True
 
 
@@ -388,7 +389,7 @@ def save_forc_workbook(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
-        writer.book.properties.creator = "ssme / Haoran Yu"
+        set_workbook_author(writer.book)
         pd.concat(raw_ch1_frames, ignore_index=True).to_excel(
             writer, sheet_name="Raw_CH1", index=False
         )

@@ -25,6 +25,7 @@ for path in (SRC_ROOT, REPO_ROOT):
 
 from keithley4200.pmu.preview import preview_sequence_configs
 from keithley4200.output import measurement_name, reserve_output_stem, voltage_tag, time_tag, saved_at
+from keithley4200.output import set_workbook_author
 from keithley4200.pmu.data_processing import calculate_polarization, read_both_channels
 from keithley4200.pmu.pmu_tests import execute_segARB_test, power_off_outputs
 from keithley4200.pmu.session import PMUSession
@@ -37,7 +38,7 @@ SEGARB_OPTIONS = {
     "LOAD_RESISTANCE": 1e3,
     "ENABLE_LLEC": False,
 }
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
 PARAMS = dict(
 
@@ -59,7 +60,7 @@ PARAMS = dict(
 
     
 )
-SAVE_DIR = Path("data/pmu/programmed/NLS_1C_switch")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\Jingtian\2025-12-14\BTO\Device3")
 PREVIEW_ONLY = True
 
 
@@ -231,7 +232,7 @@ def run_nls_switch_test(
 
     if params["MeasureSquare"]:
         with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
-            writer.book.properties.creator = "ssme / Haoran Yu"
+            set_workbook_author(writer.book)
             df_ch1.to_excel(writer, sheet_name="Raw_CH1", index=False)
             df_ch2.to_excel(writer, sheet_name="Raw_CH2", index=False)
             build_params_table(params, segarb_options).to_excel(
@@ -296,7 +297,7 @@ def run_nls_switch_test(
     result["df_vp_ch2"] = df_vp_ch2
 
     with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
-        writer.book.properties.creator = "ssme / Haoran Yu"
+        set_workbook_author(writer.book)
         df_ch1.to_excel(writer, sheet_name="Raw_CH1", index=False)
         df_ch2.to_excel(writer, sheet_name="Raw_CH2", index=False)
         df_vp_ch1.to_excel(writer, sheet_name="VP_CH1", index=False)

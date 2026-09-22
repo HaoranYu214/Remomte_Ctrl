@@ -42,10 +42,10 @@ STOP_ON_ERROR = True
 STAGE_SETTLE_TIME_S = 0.0
 
 BASE_SAVE_DIR = Path(
-    "data/workflows/ftj_package1"
+    r"C:\Users\P317151\Documents\data\06-07-2026\03C6\L40um6\FTJ_package1"
 )
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
 
 COMMON_SEGARB_OPTIONS = {

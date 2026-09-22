@@ -12,6 +12,17 @@ import math
 import re
 
 
+# Shared author for newly saved Excel files. Edit here before running experiments.
+# None disables automatic attribution; appending then preserves existing metadata.
+EXCEL_AUTHOR = "SSME_Haoran Yu"
+
+
+def set_workbook_author(workbook):
+    """Apply the shared author setting without adding measurement cells."""
+    if EXCEL_AUTHOR is not None:
+        workbook.properties.creator = EXCEL_AUTHOR
+
+
 # saved_at/time records save or summary time; r001 identifies an output group, not a test mode.
 # Saved parameter values retain their caller-defined meaning:
 # PREVIEW_ONLY: preview instead of acquisition; SAVE_WAVEFORM_PREVIEW: extra plot;
@@ -153,7 +164,7 @@ def save_atomic_workbook(sheets, path):
         # Only finalize the workbook after all sheets were written successfully.
         with open(temporary, "wb") as handle:
             writer = pd.ExcelWriter(handle, engine="openpyxl")
-            writer.book.properties.creator = "ssme / Haoran Yu"
+            set_workbook_author(writer.book)
             for name, frame in sheets.items():
                 frame.to_excel(writer, sheet_name=name, index=False)
             writer.close()

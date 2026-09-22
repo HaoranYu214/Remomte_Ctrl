@@ -41,6 +41,7 @@ for path in (SRC_ROOT, REPO_ROOT):
         sys.path.insert(0, str(path))
 
 from keithley4200.output import measurement_name, reserve_output_stem, time_tag, saved_at, voltage_tag
+from keithley4200.output import set_workbook_author
 from keithley4200.pmu.data_processing import read_both_channels
 from keithley4200.pmu.preview import preview_sequence_configs
 from keithley4200.pmu.pmu_tests import (
@@ -52,9 +53,9 @@ from keithley4200.pmu.pmu_tests import (
 from keithley4200.pmu.session import PMUSession
 from keithley4200.measurement_parameters import merge_parameters, remap_channel_options
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
-SAVE_DIR = Path("data/pmu/ftj/ftj_Identical_V1")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L30_2\FTJ\Identical")
 # Optional: choose a different output directory here.
 FILE_STEM = "Identical1"
 
@@ -447,7 +448,7 @@ def run_test(
         )
 
         with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
-            writer.book.properties.creator = "ssme / Haoran Yu"
+            set_workbook_author(writer.book)
             if df_ch1 is not None and not df_ch1.empty:
                 df_ch1.to_excel(writer, sheet_name="Channel_1", index=False)
             if df_ch2 is not None and not df_ch2.empty:

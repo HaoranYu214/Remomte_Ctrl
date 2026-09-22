@@ -148,10 +148,10 @@ params = dict(
     RES_MAX=1e15,
 )
 TEST_MODE = 2
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
 RESISTANCE_SCALE = "linear"
-SAVE_DIR = Path("data/pmu/pulse/pulse_sweep")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\FTJ\Refined")
 
 # Connect to the PMU, configure/execute both channels, read data, disable outputs, save Excel and display plots.
 # TEST_MODE selects acquisition behavior; it is not an offline preview switch.

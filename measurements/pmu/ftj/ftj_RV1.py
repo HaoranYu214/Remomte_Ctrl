@@ -25,6 +25,7 @@ for path in (SRC_ROOT, REPO_ROOT):
 
 from keithley4200.pmu.preview import preview_sequence_configs
 from keithley4200.output import measurement_name, reserve_output_stem, time_tag, saved_at, voltage_tag
+from keithley4200.output import set_workbook_author
 from keithley4200.pmu.data_processing import read_both_channels
 from keithley4200.pmu.pmu_tests import (
     MAX_SEGMENTS_PER_SEQUENCE,
@@ -35,9 +36,9 @@ from keithley4200.pmu.pmu_tests import (
 from keithley4200.pmu.session import PMUSession
 from keithley4200.measurement_parameters import merge_parameters, remap_channel_options
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
-SAVE_DIR = Path("data/pmu/ftj/ftj_RV1")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L30_2\FTJ\RV1")
 FILE_STEM = "RV1"
 
 CURRENT_RANGES = {CH1: 1e-5, CH2: 1e-5}
@@ -483,7 +484,7 @@ def run_test(
         )
 
         with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
-            writer.book.properties.creator = "ssme / Haoran Yu"
+            set_workbook_author(writer.book)
             rv_df.to_excel(writer, sheet_name="RV_ReadOnly", index=False)
             df_ch1.to_excel(writer, sheet_name="Channel_1_ReadOnly", index=False)
             df_ch2.to_excel(writer, sheet_name="Channel_2_ReadOnly", index=False)

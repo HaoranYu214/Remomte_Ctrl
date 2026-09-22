@@ -24,6 +24,7 @@ for path in (SRC_ROOT, REPO_ROOT):
         sys.path.insert(0, str(path))
 
 from keithley4200.output import measurement_name, reserve_output_stem, time_tag, saved_at, voltage_tag
+from keithley4200.output import set_workbook_author
 from keithley4200.pmu.data_processing import read_both_channels
 from keithley4200.pmu.pmu_tests import (
     execute_segARB_test,
@@ -37,9 +38,9 @@ from keithley4200.measurement_parameters import merge_parameters, remap_channel_
 from keithley4200.pmu.preview import preview_sequence_configs
 
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
-SAVE_DIR = Path("data/pmu/ftj/ftj_Identical_V2")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L30_2\FTJ\Identical_V2")
 FILE_STEM = "Identical2"
 
 CURRENT_RANGES = {CH1: 1e-5, CH2: 1e-5}
@@ -264,7 +265,7 @@ def save_checkpoint(path, rows, frames, params_df):
     try:
         combined = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
         with pd.ExcelWriter(temporary, engine="openpyxl") as writer:
-            writer.book.properties.creator = "ssme / Haoran Yu"
+            set_workbook_author(writer.book)
             pd.DataFrame(rows).to_excel(writer, sheet_name="Summary", index=False)
             combined.to_excel(writer, sheet_name="RawCombined", index=False)
             params_df.to_excel(writer, sheet_name="Parameters", index=False)

@@ -17,6 +17,7 @@ from keithley4200.pmu.pmu_tests import (
     _apply_common_pmu_options, configure_segARB_sequence,
     power_off_outputs, validate_segment_arb_configs,
 )
+from keithley4200.output import set_workbook_author
 
 
 # Validate all stage waveforms, channels and settings before connecting or reserving output files.
@@ -157,7 +158,7 @@ def execute_plan(query, plan, channels, params, options, frames, timing,
 def save_raw(path, frames, timing, parameters):
     """Checkpoint raw data before analysis, including interrupted/failed runs."""
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
-        writer.book.properties.creator = "ssme / Haoran Yu"
+        set_workbook_author(writer.book)
         for channel, parts in frames.items():
             if parts:
                 pd.concat(parts, ignore_index=True).to_excel(writer, sheet_name=f"Channel_{channel}", index=False)

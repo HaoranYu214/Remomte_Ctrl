@@ -8,6 +8,7 @@ import time
 
 import numpy as np
 from keithley4200.output import saved_at
+from keithley4200.output import set_workbook_author
 
 import pandas as pd
 
@@ -73,7 +74,7 @@ def save_fet_workbook(path, data, parameters, channel_frames=None):
     path.parent.mkdir(parents=True, exist_ok=True)
     parameters = {**parameters, "saved_at": saved_at()}
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
-        writer.book.properties.creator = "ssme / Haoran Yu"
+        set_workbook_author(writer.book)
         data.to_excel(writer, sheet_name="FET_Data", index=False)
         for channel, frame in (channel_frames or {}).items():
             if frame is not None and not frame.empty:
@@ -93,7 +94,7 @@ def save_waveform_data_sheets(workbook_path, real_time_data, schematic_data):
         mode="a",
         if_sheet_exists="replace",
     ) as writer:
-        writer.book.properties.creator = "ssme / Haoran Yu"
+        set_workbook_author(writer.book)
         real_time_data.to_excel(writer, sheet_name="Waveform_RealTime", index=False)
         schematic_data.to_excel(writer, sheet_name="Waveform_Schematic", index=False)
     return workbook_path

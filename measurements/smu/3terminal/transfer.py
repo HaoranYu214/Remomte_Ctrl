@@ -36,7 +36,7 @@ from keithley4200.smu.data_processing import retrieve_variables
 
 # -------------------- User configuration --------------------
 # Instrument and wiring defaults: check when changing hardware or connections.
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 # All installed/mapped channels; direct means a direct connection and rpm means routing through an RPM.
 AVAILABLE_CHANNELS = (1, 2, 3, 4)  # All installed SMUs mapped in KCon.
 SMU_CONNECTIONS = {
@@ -47,7 +47,7 @@ SMU_CONNECTIONS = {
 }
 
 # Run settings: output directory, active channels, offline preview, and KXCI plots.
-SAVE_DIR = Path("data/smu/3terminal/transfer")
+SAVE_DIR = Path.home() / "Documents" / "data" / "FET"
 GATE_CHANNEL = 1
 DRAIN_CHANNEL = 2
 SOURCE_CHANNEL = 3  # Independent voltage source, default 0 V; compliance and range are set in PARAMS.

@@ -46,7 +46,7 @@ from keithley4200.pmu.session import PMUSession
 from keithley4200.measurement_parameters import merge_parameters, remap_channel_options
 
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 GATE_CH, DRAIN_CH, SOURCE_SMU = 1, 2, 3
 PREVIEW_ONLY = False
 SAVE_WAVEFORM_PREVIEW = False
@@ -106,7 +106,7 @@ params = {
     'max_segments_per_sequence': MAX_SEGMENTS_PER_SEQUENCE,
 }
 
-SAVE_DIR = Path("data/pmu/fet/bipolar_program_read")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\06-08-2026\03C5_FET\FeFET 2\D40-5um gap circular 2\Vg0.5 Vd-2")
 
 
 # Append unmeasured wait segments; split waits longer than 1 s into multiple segments.

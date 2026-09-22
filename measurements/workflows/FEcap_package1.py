@@ -53,11 +53,11 @@ PREVIEW_ONLY = False
 STOP_ON_ERROR = True
 STAGE_SETTLE_TIME_S = 1.0
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
 
 # Change this one path to relocate the complete package output.
-BASE_SAVE_DIR = Path("data/workflows/FEcap_package1")
+BASE_SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\25-08-2026\03B4_hZO_2700_800_100\R10_1")
 
 # Physical properties and the common baseline waveform.
 

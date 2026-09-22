@@ -41,7 +41,7 @@ from keithley4200.pmu.pmu_tests import (
 from keithley4200.pmu.session import PMUSession
 
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
 
 PARAMS = dict(
@@ -69,7 +69,7 @@ SEGARB_OPTIONS = dict(
     ENABLE_LLEC=False,
 )
 
-SAVE_DIR = Path("data/pmu/programmed/FORC_1excute")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\FORC")
 PREVIEW_ONLY = True
 
 

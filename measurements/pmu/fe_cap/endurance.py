@@ -26,6 +26,7 @@ for path in (SRC_ROOT, REPO_ROOT):
 
 from keithley4200.pmu.preview import preview_sequence_configs
 from keithley4200.output import prepare_output_dir, reserve_output_stem, measurement_name, time_tag, saved_at, reserve_summary_stem, save_summary_workbook
+from keithley4200.output import set_workbook_author
 from keithley4200.pmu.data_processing import read_both_channels, remanent_polarization
 from keithley4200.measurement_parameters import merge_parameters, remap_channel_options
 from measurements.pmu.fe_cap import PV2, PUND_tri
@@ -33,7 +34,7 @@ from keithley4200.pmu.pmu_tests import validate_segment_arb_configs
 from keithley4200.pmu.pmu_tests import execute_segARB_test, power_off_outputs
 from keithley4200.pmu.session import PMUSession
 
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 CH1, CH2 = 1, 2
 DEVICE_AREA_CM2 = (20e-4) ** 2
 # DEVICE_AREA_CM2 = (10*1e-4)**2*3.14
@@ -80,7 +81,7 @@ SEGARB_OPTIONS = {
 
 # These are cumulative readback milestones, not per-step cycle increments.
 cycle_counts = [1, 10, 100, 1000, 1e4, 1e5, 1e6]
-SAVE_DIR = Path("data/pmu/fe_cap/endurance")
+SAVE_DIR = Path(r"C:\Users\P317151\Documents\data\14-09-2026\04A1_2700_1200_300\L20_2\4V_Endurance")
 
 
 # Preview all three waveforms first; set False for acquisition.
@@ -353,7 +354,7 @@ def make_pund_seq_configs(*, channels=None, parameters=None):
 def save_readback(path, frames, parameters, seq_configs, *, channels, metadata):
     """Checkpoint raw channels, exact waveforms, and all run settings first."""
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
-        writer.book.properties.creator = "ssme / Haoran Yu"
+        set_workbook_author(writer.book)
         for ch, frame in zip(channels, frames):
             if frame is not None:
                 frame.to_excel(writer, sheet_name=f"Channel_{ch}", index=False)
@@ -385,7 +386,7 @@ def save_analysis(path, data, readback_name):
         sheets["AnalysisMeta"] = pd.DataFrame(
             [{"name": k, "value": repr(v)} for k, v in data["meta"].items()])
     with pd.ExcelWriter(path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-        writer.book.properties.creator = "ssme / Haoran Yu"
+        set_workbook_author(writer.book)
         for name, frame in sheets.items():
             frame.to_excel(writer, sheet_name=name, index=False)
     fig, ax = plt.subplots(figsize=(6, 5))

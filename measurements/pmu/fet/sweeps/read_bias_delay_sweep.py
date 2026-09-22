@@ -25,6 +25,7 @@ for path in (SRC_ROOT, REPO_ROOT):
         sys.path.insert(0, str(path))
 
 from keithley4200.output import prepare_output_dir, reserve_summary_stem, voltage_tag
+from keithley4200.output import set_workbook_author
 from measurements.pmu.fet import bipolar_program_read as dual
 
 
@@ -384,7 +385,7 @@ def main():
     repeated_data = repeated_data.assign(time=run_time)
     workbook_path = Path(f"{summary_stem}.xlsx")
     with pd.ExcelWriter(workbook_path, engine="openpyxl") as writer:
-        writer.book.properties.creator = "ssme / Haoran Yu"
+        set_workbook_author(writer.book)
         raw_data.to_excel(writer, sheet_name="All_Raw_Data", index=False)
         metrics.to_excel(writer, sheet_name="Delay_Metrics", index=False)
         ranking.to_excel(writer, sheet_name="Read_Bias_Ranking", index=False)

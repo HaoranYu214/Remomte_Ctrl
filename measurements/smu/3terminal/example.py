@@ -25,12 +25,12 @@ from keithley4200.smu.session import SMUSession
 from keithley4200.smu.system_mode import initialize_system_mode, execute_and_wait, shutdown_system_mode, resolve_smu_timeout_s
 
 # 1. Instrument and wiring defaults: check when changing hardware or connections.
-INST = "TCPIP0::192.0.2.1::1225::SOCKET"
+INST = "TCPIP0::129.125.87.80::1225::SOCKET"
 AVAILABLE_CHANNELS = (1, 2, 3, 4)  # All installed SMUs mapped in KCon.
 SMU_CONNECTIONS = {1: "rpm:PMU1-1", 2: "rpm:PMU1-2", 3: "direct", 4: "direct"}
 
 # 2. Run settings: output directory, physical channels, offline preview, and instrument plots.
-SAVE_DIR = Path("data/smu/3terminal/example")
+SAVE_DIR = Path.home() / "Documents" / "data" / "3terminal"
 CHANNEL_1 = 1  # Master voltage list.
 CHANNEL_2 = 2  # Constant voltage bias.
 CHANNEL_3 = 3  # Constant 0 V voltage source with independent voltage/current measurement.
